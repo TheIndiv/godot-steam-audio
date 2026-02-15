@@ -67,6 +67,9 @@ jobs:
           unzip steamaudio_4.8.0.zip 'steamaudio/lib/**/*' -d src/lib
           cp -r src/lib/steamaudio/lib/osx/* project/addons/godot-steam-audio/bin/
           cp src/lib/steamaudio/lib/ios/* project/addons/godot-steam-audio/bin/ios/
+      - name: build-ios-deps
+        run: |
+          make ios-deps
       - name: build-ext
         run: |
           make macos-release && make ios-release

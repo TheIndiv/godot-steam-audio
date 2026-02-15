@@ -65,8 +65,14 @@ android.arm64.release = {
     "res://addons/godot-steam-audio/bin/android/arm64/libphonon.so": ""
 }
 ios.arm64.debug = {
-    "res://addons/godot-steam-audio/bin/ios/libphonon.a": ""
+    "res://addons/godot-steam-audio/bin/ios/libphonon.a": "",
+    "res://addons/godot-steam-audio/bin/ios/libgodot-cpp.ios.template_debug.arm64.a": "",
+    "res://addons/godot-steam-audio/bin/ios/libpffft.a": "",
+    "res://addons/godot-steam-audio/bin/ios/libmysofa.a": ""
 }
 ios.arm64.release = {
-    "res://addons/godot-steam-audio/bin/ios/libphonon.a": ""
+    "res://addons/godot-steam-audio/bin/ios/libphonon.a": "",
+    "res://addons/godot-steam-audio/bin/ios/libgodot-cpp.ios.template_release.arm64.a": "",
+    "res://addons/godot-steam-audio/bin/ios/libpffft.a": "",
+    "res://addons/godot-steam-audio/bin/ios/libmysofa.a": ""
 }
