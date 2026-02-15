@@ -47,14 +47,22 @@ elif env["platform"] == "android":
         env.Append(LIBPATH=[f'{steam_audio_lib_path}/android-x64'])
     if env["arch"] == "x86_32":
         env.Append(LIBPATH=[f'{steam_audio_lib_path}/android-x32'])
+elif env["platform"] == "ios":
+    env.Append(LIBPATH=[f'{steam_audio_lib_path}/ios'])
 
 if env["target"] in ["editor", "template_debug"]:
     doc_data = env.GodotCPPDocData("src/gen/doc_data.gen.cpp", source=Glob("doc_classes/*.xml"))
     sources.append(doc_data)
 
-library = env.SharedLibrary(
-    "project/addons/godot-steam-audio/bin/libgodot-steam-audio{}{}".format(env["suffix"], env["SHLIBSUFFIX"]),
-    source=sources,
-)
+if env["platform"] == "ios":
+    library = env.StaticLibrary(
+        "project/addons/godot-steam-audio/bin/libgodot-steam-audio{}{}".format(env["suffix"], env["LIBSUFFIX"]),
+        source=sources,
+    )
+else:
+    library = env.SharedLibrary(
+        "project/addons/godot-steam-audio/bin/libgodot-steam-audio{}{}".format(env["suffix"], env["SHLIBSUFFIX"]),
+        source=sources,
+    )
 
 Default(library)

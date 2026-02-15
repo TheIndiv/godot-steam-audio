@@ -66,9 +66,10 @@ jobs:
           curl -LO https://github.com/ValveSoftware/steam-audio/releases/download/v4.8.0/steamaudio_4.8.0.zip
           unzip steamaudio_4.8.0.zip 'steamaudio/lib/**/*' -d src/lib
           cp -r src/lib/steamaudio/lib/osx/* project/addons/godot-steam-audio/bin/
+          cp src/lib/steamaudio/lib/ios/* project/addons/godot-steam-audio/bin/ios/
       - name: build-ext
         run: |
-          make macos-release
+          make macos-release && make ios-release
       - uses: actions/upload-artifact@v4
         with:
           name: godot-steam-audio-macos-${{ env.COMMIT_SHORT_SHA }}
