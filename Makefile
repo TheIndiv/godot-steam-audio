@@ -32,22 +32,20 @@ macos-release:
 
 ios-deps:
 	# Build pffft for iOS arm64
-	git clone --depth 1 https://github.com/marton78/pffft.git /tmp/pffft-src || true
 	IOS_SDK=$$(xcrun --sdk iphoneos --show-sdk-path) && \
 		xcrun --sdk iphoneos clang -arch arm64 -isysroot "$$IOS_SDK" -miphoneos-version-min=12.0 -O2 -DPFFFT_ENABLE_NEON \
-			-c /tmp/pffft-src/pffft.c -o /tmp/pffft.o && \
+			-c src/lib/pffft/pffft.c -o src/lib/pffft/pffft.o && \
 		xcrun --sdk iphoneos clang -arch arm64 -isysroot "$$IOS_SDK" -miphoneos-version-min=12.0 -O2 -DPFFFT_ENABLE_NEON \
-			-c /tmp/pffft-src/pffft_common.c -o /tmp/pffft_common.o && \
-		ar rcs project/addons/godot-steam-audio/bin/ios/libpffft.a /tmp/pffft.o /tmp/pffft_common.o
+			-c src/lib/pffft/pffft_common.c -o src/lib/pffft/pffft_common.o && \
+		ar rcs project/addons/godot-steam-audio/bin/ios/libpffft.a src/lib/pffft/pffft.o src/lib/pffft/pffft_common.o
 	# Build libmysofa for iOS arm64
-	git clone --depth 1 https://github.com/hoene/libmysofa.git /tmp/libmysofa-src || true
 	IOS_SDK=$$(xcrun --sdk iphoneos --show-sdk-path) && \
-		cmake -S /tmp/libmysofa-src -B /tmp/libmysofa-src/build-ios \
+		cmake -S src/lib/libmysofa -B src/lib/libmysofa/build-ios \
 			-DCMAKE_SYSTEM_NAME=iOS -DCMAKE_OSX_ARCHITECTURES=arm64 \
 			-DCMAKE_OSX_DEPLOYMENT_TARGET=12.0 -DCMAKE_OSX_SYSROOT="$$IOS_SDK" \
 			-DBUILD_TESTS=OFF -DBUILD_SHARED_LIBS=OFF && \
-		cmake --build /tmp/libmysofa-src/build-ios --config Release
-	cp /tmp/libmysofa-src/build-ios/src/libmysofa.a project/addons/godot-steam-audio/bin/ios/
+		cmake --build src/lib/libmysofa/build-ios --config Release
+	cp src/lib/libmysofa/build-ios/src/libmysofa.a project/addons/godot-steam-audio/bin/ios/
 
 ios-release: ios-deps
 	scons platform=ios arch=arm64 target=template_debug && scons platform=ios arch=arm64 target=template_release
