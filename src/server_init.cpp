@@ -85,6 +85,10 @@ IPLSceneSettings create_scene_cfg(IPLContext ctx) {
 			OS::get_singleton()->get_name() == "Android") {
 		SteamAudioConfig::scene_type = IPL_SCENETYPE_DEFAULT;
 		SteamAudio::log(SteamAudio::log_info, "Embree is not supported on Android, reverting to default scene type.");
+	} else if (SteamAudioConfig::scene_type == IPL_SCENETYPE_EMBREE &&
+			OS::get_singleton()->get_name() == "iOS") {
+		SteamAudioConfig::scene_type = IPL_SCENETYPE_DEFAULT;
+		SteamAudio::log(SteamAudio::log_info, "Embree is not supported on iOS, reverting to default scene type.");
 	}
 
 	scene_cfg.type = SteamAudioConfig::scene_type;
