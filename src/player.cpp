@@ -58,6 +58,9 @@ void SteamAudioPlayer::_bind_methods() {
 	ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "occlusion_radius", PROPERTY_HINT_RANGE, "0.0,20.0,0.1"), "set_occlusion_radius", "get_occlusion_radius");
 	ADD_PROPERTY(PropertyInfo(Variant::INT, "occlusion_samples", PROPERTY_HINT_RANGE, "0,512,1"), "set_occlusion_samples", "get_occlusion_samples");
 	ADD_PROPERTY(PropertyInfo(Variant::INT, "transmission_rays", PROPERTY_HINT_RANGE, "0,512,1"), "set_transmission_rays", "get_transmission_rays");
+	ClassDB::bind_method(D_METHOD("get_transmission_type"), &SteamAudioPlayer::get_transmission_type);
+	ClassDB::bind_method(D_METHOD("set_transmission_type", "p_transmission_type"), &SteamAudioPlayer::set_transmission_type);
+	ADD_PROPERTY(PropertyInfo(Variant::INT, "transmission_type", PROPERTY_HINT_ENUM, "Frequency-Independent,Frequency-Dependent"), "set_transmission_type", "get_transmission_type");
 
 	ADD_GROUP("Ambisonics", "");
 	ADD_PROPERTY(PropertyInfo(Variant::INT, "ambisonics_order", PROPERTY_HINT_RANGE, "0,5,1"), "set_ambisonics_order", "get_ambisonics_order");
@@ -266,7 +269,7 @@ void SteamAudioPlayer::play_stream(const Ref<AudioStream> &p_stream, float p_fro
 	auto str = dynamic_cast<SteamAudioStream *>(get_stream().ptr());
 	if (str == nullptr) {
 		SteamAudio::log(SteamAudio::log_warn,
-				"Tried to get an inner stream from a SteamAudioPlayer, but its outer stream is not a SteamAudioStream. Returning null.");
+						"Tried to get an inner stream from a SteamAudioPlayer, but its outer stream is not a SteamAudioStream. Returning null.");
 		return;
 	}
 	str->set_stream(p_stream);
@@ -274,7 +277,7 @@ void SteamAudioPlayer::play_stream(const Ref<AudioStream> &p_stream, float p_fro
 	auto playback_ptr = dynamic_cast<SteamAudioStreamPlayback *>(get_stream_playback().ptr());
 	if (playback_ptr == nullptr) {
 		SteamAudio::log(SteamAudio::log_warn,
-				"Tried to play a new stream on SteamAudioPlayer, but this player's outer stream was not a SteamAudioStream. Will not play anything.");
+						"Tried to play a new stream on SteamAudioPlayer, but this player's outer stream was not a SteamAudioStream. Will not play anything.");
 		this->stop();
 		return;
 	}
@@ -286,7 +289,7 @@ Ref<AudioStream> SteamAudioPlayer::get_inner_stream() {
 	auto str = dynamic_cast<SteamAudioStream *>(get_stream().ptr());
 	if (str == nullptr) {
 		SteamAudio::log(SteamAudio::log_warn,
-				"Tried to get an inner stream from a SteamAudioPlayer, but its outer stream is not a SteamAudioStream. Returning null.");
+						"Tried to get an inner stream from a SteamAudioPlayer, but its outer stream is not a SteamAudioStream. Returning null.");
 		Ref<AudioStream> null_str;
 		return null_str;
 	}
@@ -298,7 +301,7 @@ Ref<AudioStreamPlayback> SteamAudioPlayer::get_inner_stream_playback() {
 	auto spb = dynamic_cast<SteamAudioStreamPlayback *>(get_stream_playback().ptr());
 	if (spb == nullptr) {
 		SteamAudio::log(SteamAudio::log_warn,
-				"Tried to get an inner stream playback from a SteamAudioPlayer, but its outer stream playback is not a SteamAudioStreamPlayback (or the player may not be playing audio). Returning null.");
+						"Tried to get an inner stream playback from a SteamAudioPlayer, but its outer stream playback is not a SteamAudioStreamPlayback (or the player may not be playing audio). Returning null.");
 		Ref<AudioStreamPlayback> null_pb;
 		return null_pb;
 	}
@@ -337,6 +340,9 @@ bool SteamAudioPlayer::is_reflection_on() { return cfg.is_reflection_on; }
 void SteamAudioPlayer::set_reflection_on(bool p_reflection_on) { cfg.is_reflection_on = p_reflection_on; }
 bool SteamAudioPlayer::is_occlusion_on() { return cfg.is_occlusion_on; }
 void SteamAudioPlayer::set_occlusion_on(bool p_occlusion_on) { cfg.is_occlusion_on = p_occlusion_on; }
+
+IPLTransmissionType SteamAudioPlayer::get_transmission_type() { return cfg.transmission_type; }
+void SteamAudioPlayer::set_transmission_type(IPLTransmissionType p_transmission_type) { cfg.transmission_type = p_transmission_type; }
 
 PackedStringArray SteamAudioPlayer::_get_configuration_warnings() const {
 	PackedStringArray res;

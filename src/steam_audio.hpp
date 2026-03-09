@@ -11,6 +11,7 @@
 using namespace godot;
 
 VARIANT_ENUM_CAST(IPLAirAbsorptionModelType);
+VARIANT_ENUM_CAST(IPLTransmissionType);
 
 class SteamAudio {
 public:
@@ -58,6 +59,7 @@ struct SteamAudioSourceConfig {
 	bool is_ambisonics_on;
 	bool is_occlusion_on;
 	bool is_reflection_on;
+	IPLTransmissionType transmission_type;
 };
 
 struct SteamAudioEffects {

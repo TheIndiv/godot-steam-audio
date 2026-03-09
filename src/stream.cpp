@@ -96,6 +96,7 @@ int32_t SteamAudioStreamPlayback::_mix(AudioFrame *buffer, float rate_scale, int
 				ls->direct_outputs.flags |
 				IPL_DIRECTEFFECTFLAGS_APPLYOCCLUSION |
 				IPL_DIRECTEFFECTFLAGS_APPLYTRANSMISSION);
+		ls->direct_outputs.transmissionType = ls->cfg.transmission_type;
 	}
 
 	if (ls->direct_outputs.flags != 0) {

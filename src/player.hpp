@@ -34,7 +34,8 @@ private:
 		IPLAirAbsorptionModelType::IPL_AIRABSORPTIONTYPE_DEFAULT,
 		true,
 		true,
-		false
+		false,
+		IPLTransmissionType::IPL_TRANSMISSIONTYPE_FREQDEPENDENT
 	};
 
 	LocalSteamAudioState local_state;
@@ -89,6 +90,9 @@ public:
 
 	bool is_occlusion_on();
 	void set_occlusion_on(bool p_occlusion_on);
+
+	IPLTransmissionType get_transmission_type();
+	void set_transmission_type(IPLTransmissionType p_transmission_type);
 
 	void play_stream(const Ref<AudioStream> &p_stream, float p_from_offset, float p_volume_db, float p_pitch_scale);
 	Ref<AudioStream> get_inner_stream();
