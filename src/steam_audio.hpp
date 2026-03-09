@@ -60,6 +60,9 @@ struct SteamAudioSourceConfig {
 	bool is_occlusion_on;
 	bool is_reflection_on;
 	IPLTransmissionType transmission_type;
+	bool is_directivity_on;
+	float dipole_weight;
+	float dipole_power;
 };
 
 struct SteamAudioEffects {

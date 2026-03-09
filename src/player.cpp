@@ -33,6 +33,12 @@ void SteamAudioPlayer::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("set_occlusion_on", "p_occlusion_on"), &SteamAudioPlayer::set_occlusion_on);
 	ClassDB::bind_method(D_METHOD("is_reflection_on"), &SteamAudioPlayer::is_reflection_on);
 	ClassDB::bind_method(D_METHOD("set_reflection_on", "p_reflection_on"), &SteamAudioPlayer::set_reflection_on);
+	ClassDB::bind_method(D_METHOD("is_directivity_on"), &SteamAudioPlayer::is_directivity_on);
+	ClassDB::bind_method(D_METHOD("set_directivity_on", "p_directivity_on"), &SteamAudioPlayer::set_directivity_on);
+	ClassDB::bind_method(D_METHOD("get_dipole_weight"), &SteamAudioPlayer::get_dipole_weight);
+	ClassDB::bind_method(D_METHOD("set_dipole_weight", "p_dipole_weight"), &SteamAudioPlayer::set_dipole_weight);
+	ClassDB::bind_method(D_METHOD("get_dipole_power"), &SteamAudioPlayer::get_dipole_power);
+	ClassDB::bind_method(D_METHOD("set_dipole_power", "p_dipole_power"), &SteamAudioPlayer::set_dipole_power);
 	ClassDB::bind_method(D_METHOD("get_occlusion_radius"), &SteamAudioPlayer::get_occlusion_radius);
 	ClassDB::bind_method(D_METHOD("set_occlusion_radius", "p_occlusion_radius"), &SteamAudioPlayer::set_occlusion_radius);
 	ClassDB::bind_method(D_METHOD("get_occlusion_samples"), &SteamAudioPlayer::get_occlusion_samples);
@@ -68,6 +74,11 @@ void SteamAudioPlayer::_bind_methods() {
 	ADD_GROUP("Reflection", "");
 	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "reflection"), "set_reflection_on", "is_reflection_on");
 	ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "max_reflection_distance", PROPERTY_HINT_RANGE, "0.0,20000.0,0.1"), "set_max_reflection_distance", "get_max_reflection_distance");
+
+	ADD_GROUP("Directivity", "");
+	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "directivity"), "set_directivity_on", "is_directivity_on");
+	ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "dipole_weight", PROPERTY_HINT_RANGE, "0.0,1.0,0.01"), "set_dipole_weight", "get_dipole_weight");
+	ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "dipole_power", PROPERTY_HINT_RANGE, "0.0,4.0,0.01"), "set_dipole_power", "get_dipole_power");
 }
 
 SteamAudioPlayer::SteamAudioPlayer() {
@@ -253,6 +264,13 @@ void SteamAudioPlayer::process_internal(double delta) {
 	if (is_playing() && !get_stream_playback().is_null()) {
 		pb = get_stream_playback();
 	}
+
+	// Sync cfg changes (e.g. runtime property toggles) into local_state.cfg.
+	// local_state.cfg is a copy made at init time, so setters must be reflected here.
+	if (is_local_state_init.load()) {
+		std::unique_lock lock(local_state.mux);
+		local_state.cfg = cfg;
+	}
 }
 
 void SteamAudioPlayer::play_stream(const Ref<AudioStream> &p_stream, float p_from_offset, float p_volume_db, float p_pitch_scale) {
@@ -343,6 +361,13 @@ void SteamAudioPlayer::set_occlusion_on(bool p_occlusion_on) { cfg.is_occlusion_
 
 IPLTransmissionType SteamAudioPlayer::get_transmission_type() { return cfg.transmission_type; }
 void SteamAudioPlayer::set_transmission_type(IPLTransmissionType p_transmission_type) { cfg.transmission_type = p_transmission_type; }
+
+bool SteamAudioPlayer::is_directivity_on() { return cfg.is_directivity_on; }
+void SteamAudioPlayer::set_directivity_on(bool p_directivity_on) { cfg.is_directivity_on = p_directivity_on; }
+float SteamAudioPlayer::get_dipole_weight() { return cfg.dipole_weight; }
+void SteamAudioPlayer::set_dipole_weight(float p_dipole_weight) { cfg.dipole_weight = p_dipole_weight; }
+float SteamAudioPlayer::get_dipole_power() { return cfg.dipole_power; }
+void SteamAudioPlayer::set_dipole_power(float p_dipole_power) { cfg.dipole_power = p_dipole_power; }
 
 PackedStringArray SteamAudioPlayer::_get_configuration_warnings() const {
 	PackedStringArray res;

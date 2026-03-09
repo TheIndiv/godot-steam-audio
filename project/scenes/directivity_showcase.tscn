@@ -1,0 +1,262 @@
+[gd_scene format=3 uid="uid://dq7t4x3nab2kp"]
+
+[ext_resource type="AudioStream" uid="uid://ca6667b63t1vv" path="res://sound/pluck1.mp3" id="beep_sound"]
+[ext_resource type="Script" uid="uid://bsuex25ycqs6d" path="res://src/player.gd" id="player_script"]
+[ext_resource type="Script" uid="uid://b4h9jw6mn3c2t" path="res://src/directivity_showcase.gd" id="showcase_script"]
+[ext_resource type="Script" uid="uid://c5r8n2t7j1qvx" path="res://src/directivity_speaker.gd" id="dir_speaker_script"]
+[ext_resource type="Script" uid="uid://bwvolbm6jpfyo" path="res://src/cone_visualizer.gd" id="cone_vis_script"]
+
+[sub_resource type="PhysicalSkyMaterial" id="sky_mat"]
+
+[sub_resource type="Sky" id="sky"]
+sky_material = SubResource("sky_mat")
+
+[sub_resource type="Environment" id="env"]
+background_mode = 2
+sky = SubResource("sky")
+ambient_light_source = 3
+reflected_light_source = 2
+
+[sub_resource type="BoxShape3D" id="shape_ground"]
+size = Vector3(40, 0.2, 30)
+
+[sub_resource type="StandardMaterial3D" id="mat_ground"]
+albedo_color = Color(0.25, 0.22, 0.18, 1)
+
+[sub_resource type="BoxMesh" id="mesh_ground"]
+material = SubResource("mat_ground")
+size = Vector3(40, 0.2, 30)
+
+[sub_resource type="StandardMaterial3D" id="mat_speaker"]
+albedo_color = Color(0.07, 0.07, 0.07, 1)
+
+[sub_resource type="BoxMesh" id="mesh_speaker_box"]
+material = SubResource("mat_speaker")
+size = Vector3(0.5, 0.7, 0.35)
+
+[sub_resource type="StandardMaterial3D" id="mat_stand"]
+albedo_color = Color(0.3, 0.3, 0.3, 1)
+
+[sub_resource type="CylinderMesh" id="mesh_stand"]
+material = SubResource("mat_stand")
+top_radius = 0.04
+bottom_radius = 0.04
+height = 1.5
+
+[sub_resource type="CapsuleShape3D" id="shape_player"]
+
+[node name="DirectivityShowcase" type="Node3D"]
+script = ExtResource("showcase_script")
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("env")
+
+[node name="DirectionalLight3D" type="DirectionalLight3D" parent="."]
+transform = Transform3D(0.0283352, -0.959332, 0.280855, 0.280166, 0.277328, 0.919019, -0.959533, 0.0526454, 0.27663, 0, 9, 0)
+shadow_enabled = true
+
+[node name="SteamAudioConfig" type="SteamAudioConfig" parent="."]
+scene_type = 0
+
+[node name="Ground" type="StaticBody3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.1, 0)
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Ground"]
+shape = SubResource("shape_ground")
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="Ground"]
+mesh = SubResource("mesh_ground")
+
+[node name="Speakers" type="Node3D" parent="."]
+
+[node name="Speaker0" type="SteamAudioPlayer" parent="Speakers"]
+transform = Transform3D(-1, 0, 0, 0, 1, 0, 0, 0, -1, -12, 1.5, 0)
+stream = ExtResource("beep_sound")
+distance_attenuation = true
+autoplay = false
+
+[node name="DirectivitySpeaker" type="Node" parent="Speakers/Speaker0"]
+script = ExtResource("dir_speaker_script")
+dipole_weight = 0.0
+dipole_power = 1.0
+proximity_radius = 5.0
+
+[node name="ConeVisualizer" type="MeshInstance3D" parent="Speakers/Speaker0"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -1.5, 0)
+script = ExtResource("cone_vis_script")
+dipole_weight = 0.0
+dipole_power = 1.0
+max_radius = 4.0
+color = Color(0.85, 0.85, 0.85, 0.55)
+
+[node name="SpeakerBox" type="MeshInstance3D" parent="Speakers/Speaker0"]
+mesh = SubResource("mesh_speaker_box")
+
+[node name="Stand" type="MeshInstance3D" parent="Speakers/Speaker0"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -1.1, 0)
+mesh = SubResource("mesh_stand")
+
+[node name="Label3D" type="Label3D" parent="Speakers/Speaker0"]
+transform = Transform3D(-1, 0, 0, 0, 1, 0, 0, 0, -1, 0, 1.2, 0)
+text = "Omnidirectional
+w=0.0"
+font_size = 48
+outline_size = 8
+billboard = 1
+
+[node name="Speaker1" type="SteamAudioPlayer" parent="Speakers"]
+transform = Transform3D(-1, 0, 0, 0, 1, 0, 0, 0, -1, -4, 1.5, 0)
+stream = ExtResource("beep_sound")
+distance_attenuation = true
+autoplay = false
+
+[node name="DirectivitySpeaker" type="Node" parent="Speakers/Speaker1"]
+script = ExtResource("dir_speaker_script")
+dipole_weight = 0.3
+dipole_power = 1.5
+proximity_radius = 5.0
+
+[node name="ConeVisualizer" type="MeshInstance3D" parent="Speakers/Speaker1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -1.5, 0)
+script = ExtResource("cone_vis_script")
+dipole_weight = 0.3
+dipole_power = 1.5
+max_radius = 4.0
+color = Color(0.0, 0.9, 1.0, 0.55)
+
+[node name="SpeakerBox" type="MeshInstance3D" parent="Speakers/Speaker1"]
+mesh = SubResource("mesh_speaker_box")
+
+[node name="Stand" type="MeshInstance3D" parent="Speakers/Speaker1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -1.1, 0)
+mesh = SubResource("mesh_stand")
+
+[node name="Label3D" type="Label3D" parent="Speakers/Speaker1"]
+transform = Transform3D(-1, 0, 0, 0, 1, 0, 0, 0, -1, 0, 1.2, 0)
+text = "Wide Cardioid
+w=0.3"
+font_size = 48
+outline_size = 8
+billboard = 1
+
+[node name="Speaker2" type="SteamAudioPlayer" parent="Speakers"]
+transform = Transform3D(-1, 0, 0, 0, 1, 0, 0, 0, -1, 4, 1.5, 0)
+stream = ExtResource("beep_sound")
+distance_attenuation = true
+autoplay = false
+
+[node name="DirectivitySpeaker" type="Node" parent="Speakers/Speaker2"]
+script = ExtResource("dir_speaker_script")
+dipole_weight = 0.5
+dipole_power = 2.0
+proximity_radius = 5.0
+
+[node name="ConeVisualizer" type="MeshInstance3D" parent="Speakers/Speaker2"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -1.5, 0)
+script = ExtResource("cone_vis_script")
+dipole_weight = 0.5
+dipole_power = 2.0
+max_radius = 4.0
+color = Color(0.2, 1.0, 0.3, 0.55)
+
+[node name="SpeakerBox" type="MeshInstance3D" parent="Speakers/Speaker2"]
+mesh = SubResource("mesh_speaker_box")
+
+[node name="Stand" type="MeshInstance3D" parent="Speakers/Speaker2"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -1.1, 0)
+mesh = SubResource("mesh_stand")
+
+[node name="Label3D" type="Label3D" parent="Speakers/Speaker2"]
+transform = Transform3D(-1, 0, 0, 0, 1, 0, 0, 0, -1, 0, 1.2, 0)
+text = "Cardioid
+w=0.5"
+font_size = 48
+outline_size = 8
+billboard = 1
+
+[node name="Speaker3" type="SteamAudioPlayer" parent="Speakers"]
+transform = Transform3D(-1, 0, 0, 0, 1, 0, 0, 0, -1, 12, 1.5, 0)
+stream = ExtResource("beep_sound")
+distance_attenuation = true
+autoplay = false
+
+[node name="DirectivitySpeaker" type="Node" parent="Speakers/Speaker3"]
+script = ExtResource("dir_speaker_script")
+dipole_weight = 0.75
+dipole_power = 3.0
+proximity_radius = 5.0
+
+[node name="ConeVisualizer" type="MeshInstance3D" parent="Speakers/Speaker3"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -1.5, 0)
+script = ExtResource("cone_vis_script")
+dipole_weight = 0.75
+dipole_power = 3.0
+max_radius = 4.0
+color = Color(1.0, 0.6, 0.0, 0.55)
+
+[node name="SpeakerBox" type="MeshInstance3D" parent="Speakers/Speaker3"]
+mesh = SubResource("mesh_speaker_box")
+
+[node name="Stand" type="MeshInstance3D" parent="Speakers/Speaker3"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -1.1, 0)
+mesh = SubResource("mesh_stand")
+
+[node name="Label3D" type="Label3D" parent="Speakers/Speaker3"]
+transform = Transform3D(-1, 0, 0, 0, 1, 0, 0, 0, -1, 0, 1.2, 0)
+text = "Hypercardioid
+w=0.75"
+font_size = 48
+outline_size = 8
+billboard = 1
+
+[node name="Player" type="CharacterBody3D" parent="." groups=["player"] node_paths=PackedStringArray("cam")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 8)
+script = ExtResource("player_script")
+cam = NodePath("Camera3D")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Player"]
+shape = SubResource("shape_player")
+
+[node name="Camera3D" type="Camera3D" parent="Player"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.6, 0)
+
+[node name="SteamAudioListener" type="SteamAudioListener" parent="Player/Camera3D"]
+
+[node name="UI" type="Control" parent="."]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Instructions" type="RichTextLabel" parent="UI"]
+layout_mode = 1
+offset_right = 320.0
+offset_bottom = 160.0
+bbcode_enabled = true
+text = "[b]Directivity Showcase[/b]
+
+[WASD] Move    [Mouse] Look
+[Esc] Toggle cursor
+
+Walk up to each speaker.
+Move [b]behind[/b] it — sound cuts off!
+Each speaker has a different pattern."
+fit_content = true
+scroll_active = false
+
+[node name="ModeLabel" type="RichTextLabel" parent="UI"]
+layout_mode = 1
+anchors_preset = 5
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -280.0
+offset_top = 12.0
+offset_right = 280.0
+offset_bottom = 60.0
+grow_horizontal = 2
+bbcode_enabled = true
+text = "[b][T]  Directivity:  [color=#44ff88]ON[/color][/b]"
+fit_content = true
+scroll_active = false

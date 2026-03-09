@@ -35,7 +35,10 @@ private:
 		true,
 		true,
 		false,
-		IPLTransmissionType::IPL_TRANSMISSIONTYPE_FREQDEPENDENT
+		IPLTransmissionType::IPL_TRANSMISSIONTYPE_FREQDEPENDENT,
+		false,
+		0.0f,
+		1.0f
 	};
 
 	LocalSteamAudioState local_state;
@@ -93,6 +96,13 @@ public:
 
 	IPLTransmissionType get_transmission_type();
 	void set_transmission_type(IPLTransmissionType p_transmission_type);
+
+	bool is_directivity_on();
+	void set_directivity_on(bool p_directivity_on);
+	float get_dipole_weight();
+	void set_dipole_weight(float p_dipole_weight);
+	float get_dipole_power();
+	void set_dipole_power(float p_dipole_power);
 
 	void play_stream(const Ref<AudioStream> &p_stream, float p_from_offset, float p_volume_db, float p_pitch_scale);
 	Ref<AudioStream> get_inner_stream();

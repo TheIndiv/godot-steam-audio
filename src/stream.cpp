@@ -98,6 +98,11 @@ int32_t SteamAudioStreamPlayback::_mix(AudioFrame *buffer, float rate_scale, int
 				IPL_DIRECTEFFECTFLAGS_APPLYTRANSMISSION);
 		ls->direct_outputs.transmissionType = ls->cfg.transmission_type;
 	}
+	if (ls->cfg.is_directivity_on) {
+		ls->direct_outputs.flags = static_cast<IPLDirectEffectFlags>(
+				ls->direct_outputs.flags |
+				IPL_DIRECTEFFECTFLAGS_APPLYDIRECTIVITY);
+	}
 
 	if (ls->direct_outputs.flags != 0) {
 		iplDirectEffectApply(

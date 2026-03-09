@@ -55,11 +55,7 @@ void SteamAudioServer::tick() {
 		absorp_model.coefficients[1] = ls->cfg.air_absorption_mid;
 		absorp_model.coefficients[2] = ls->cfg.air_absorption_high;
 
-		IPLCoordinateSpace3 src_coords;
-		src_coords.ahead = IPLVector3{};
-		src_coords.up = IPLVector3{};
-		src_coords.right = IPLVector3{};
-		src_coords.origin = ipl_vec3_from(src_pos);
+		IPLCoordinateSpace3 src_coords = ipl_coords_from(ls->src.player->get_global_transform());
 
 		IPLSimulationInputs inputs{};
 		inputs.flags = IPL_SIMULATIONFLAGS_DIRECT;
@@ -87,6 +83,13 @@ void SteamAudioServer::tick() {
 					inputs.directFlags |
 					IPL_DIRECTSIMULATIONFLAGS_OCCLUSION |
 					IPL_DIRECTSIMULATIONFLAGS_TRANSMISSION);
+		}
+		if (ls->cfg.is_directivity_on) {
+			inputs.directivity.dipoleWeight = ls->cfg.dipole_weight;
+			inputs.directivity.dipolePower = ls->cfg.dipole_power;
+			inputs.directFlags = static_cast<IPLDirectSimulationFlags>(
+					inputs.directFlags |
+					IPL_DIRECTSIMULATIONFLAGS_DIRECTIVITY);
 		}
 
 		SteamAudio::log(SteamAudio::log_debug, "tick: setting inputs");
@@ -161,12 +164,7 @@ void SteamAudioServer::tick() {
 			continue;
 		}
 
-		Vector3 src_pos = ls->src.player->get_global_position();
-		IPLCoordinateSpace3 src_coords;
-		src_coords.ahead = IPLVector3{};
-		src_coords.up = IPLVector3{};
-		src_coords.right = IPLVector3{};
-		src_coords.origin = ipl_vec3_from(src_pos);
+		IPLCoordinateSpace3 src_coords = ipl_coords_from(ls->src.player->get_global_transform());
 
 		IPLSimulationInputs inputs{};
 		inputs.flags = IPL_SIMULATIONFLAGS_REFLECTIONS;
