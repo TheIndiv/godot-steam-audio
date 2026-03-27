@@ -9,12 +9,12 @@ extends Node
 @export var beep_interval: float = 2.0
 
 var _player_node: Node3D = null
-var _audio: Node3D = null
+var _audio: AudioStreamPlayer3D = null
 var _timer: float = 0.0
 var _next_beep: float = 0.0
 
 func _ready() -> void:
-	_audio = get_parent() as Node3D
+	_audio = get_parent() as AudioStreamPlayer3D
 	_audio.set("directivity", true)
 	_audio.set("dipole_weight", dipole_weight)
 	_audio.set("dipole_power", dipole_power)
@@ -36,5 +36,5 @@ func _process(delta: float) -> void:
 	if _timer >= _next_beep:
 		_timer = 0.0
 		_next_beep = beep_interval + randf_range(-0.4, 0.4)
-		if not _audio.call("is_playing"):
-			_audio.call("play")
+		if not _audio.is_playing():
+			_audio.play()

@@ -100,7 +100,7 @@ inline int ambisonic_channels_from(int order) {
 
 inline IPLVector3 ipl_vec3_from(Vector3 v) { return IPLVector3{ v.x, v.y, v.z }; }
 
-inline IPLCoordinateSpace3 ipl_coords_from(Transform3D trf) {
+inline IPLCoordinateSpace3 ipl_coords_from(const Transform3D &trf) {
 	auto orig = trf.origin;
 	auto right = trf.get_basis().get_column(0);
 	auto up = trf.get_basis().get_column(1);
