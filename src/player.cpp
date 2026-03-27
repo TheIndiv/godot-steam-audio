@@ -47,6 +47,8 @@ void SteamAudioPlayer::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("set_transmission_rays", "p_transmission_rays"), &SteamAudioPlayer::set_transmission_rays);
 	ClassDB::bind_method(D_METHOD("get_ambisonics_order"), &SteamAudioPlayer::get_ambisonics_order);
 	ClassDB::bind_method(D_METHOD("set_ambisonics_order", "p_ambisonics_order"), &SteamAudioPlayer::set_ambisonics_order);
+	ClassDB::bind_method(D_METHOD("is_ambisonics_on"), &SteamAudioPlayer::is_ambisonics_on);
+	ClassDB::bind_method(D_METHOD("set_ambisonics_on", "p_ambisonics_on"), &SteamAudioPlayer::set_ambisonics_on);
 
 	ADD_GROUP("Distance Attenuation", "");
 	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "distance_attenuation"), "set_dist_attn_on", "is_dist_attn_on");
@@ -69,6 +71,7 @@ void SteamAudioPlayer::_bind_methods() {
 	ADD_PROPERTY(PropertyInfo(Variant::INT, "transmission_type", PROPERTY_HINT_ENUM, "Frequency-Independent,Frequency-Dependent"), "set_transmission_type", "get_transmission_type");
 
 	ADD_GROUP("Ambisonics", "");
+	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "ambisonics"), "set_ambisonics_on", "is_ambisonics_on");
 	ADD_PROPERTY(PropertyInfo(Variant::INT, "ambisonics_order", PROPERTY_HINT_RANGE, "0,5,1"), "set_ambisonics_order", "get_ambisonics_order");
 
 	ADD_GROUP("Reflection", "");
@@ -368,6 +371,9 @@ float SteamAudioPlayer::get_dipole_weight() { return cfg.dipole_weight; }
 void SteamAudioPlayer::set_dipole_weight(float p_dipole_weight) { cfg.dipole_weight = p_dipole_weight; cfg_dirty.store(true); }
 float SteamAudioPlayer::get_dipole_power() { return cfg.dipole_power; }
 void SteamAudioPlayer::set_dipole_power(float p_dipole_power) { cfg.dipole_power = p_dipole_power; cfg_dirty.store(true); }
+
+bool SteamAudioPlayer::is_ambisonics_on() { return cfg.is_ambisonics_on; }
+void SteamAudioPlayer::set_ambisonics_on(bool p_ambisonics_on) { cfg.is_ambisonics_on = p_ambisonics_on; cfg_dirty.store(true); }
 
 PackedStringArray SteamAudioPlayer::_get_configuration_warnings() const {
 	PackedStringArray res;
