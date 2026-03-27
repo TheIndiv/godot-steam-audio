@@ -25,6 +25,20 @@ inline IPLStaticMesh godot_mesh_to_ipl_mesh(Ref<Mesh> mesh, IPLScene scene, IPLM
 	Array verts = dat[Mesh::ARRAY_VERTEX];
 	Array tris = dat[Mesh::ARRAY_INDEX];
 
+	// Baked CSG meshes and some ArrayMeshes have no index buffer —
+	// vertices are laid out as sequential triangles.
+	if (tris.is_empty()) {
+		tris.resize(verts.size());
+		for (int i = 0; i < verts.size(); i++) {
+			tris[i] = i;
+		}
+	}
+
+	if (verts.is_empty() || tris.is_empty()) {
+		SteamAudio::log(SteamAudio::log_warn, "Mesh surface has no vertices or triangles, skipping.");
+		return IPLStaticMesh{nullptr};
+	}
+
 	std::vector<IPLVector3> ipl_verts(verts.size());
 	std::vector<IPLTriangle> ipl_tris(tris.size() / 3);
 	std::vector<IPLint32> ipl_mat_indices(tris.size() / 3);
@@ -84,7 +98,9 @@ inline std::vector<IPLStaticMesh> create_meshes_from_mesh_inst_3d(MeshInstance3D
 
 	for (int i = 0; i < mesh->get_surface_count(); i++) {
 		auto ipl_mesh = godot_mesh_to_ipl_mesh(mesh, scene, material, trf, i);
-		p_meshes.push_back(ipl_mesh);
+		if (ipl_mesh != nullptr) {
+			p_meshes.push_back(ipl_mesh);
+		}
 	}
 
 	return p_meshes;
@@ -172,7 +188,9 @@ inline std::vector<IPLStaticMesh> create_meshes_from_coll_inst_3d(CollisionShape
 
 	for (int i = 0; i < mesh->get_surface_count(); i++) {
 		auto ipl_mesh = godot_mesh_to_ipl_mesh(mesh, scene, material, trf, i);
-		p_meshes.push_back(ipl_mesh);
+		if (ipl_mesh != nullptr) {
+			p_meshes.push_back(ipl_mesh);
+		}
 	}
 	mesh.unref();
 	return p_meshes;
