@@ -26,6 +26,9 @@ private:
 	std::mutex init_mux;
 	std::mutex refl_mux;
 	std::mutex tick_mux;
+	// Guards global_state.scene/sim mesh and source add/remove/commit against the reflection
+	// thread's iplSimulatorRunReflections.
+	std::mutex scene_mux;
 	std::condition_variable cv;
 
 	// meshes to add to the global state scene after it's initialized.
@@ -57,6 +60,8 @@ public:
 	void remove_static_mesh(IPLStaticMesh mesh);
 	void add_dynamic_mesh(IPLInstancedMesh mesh);
 	void remove_dynamic_mesh(IPLInstancedMesh mesh);
+	void add_source(IPLSource src);
+	void remove_source(IPLSource src);
 
 	void tick();
 };

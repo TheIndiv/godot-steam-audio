@@ -116,7 +116,7 @@ SteamAudioPlayer::~SteamAudioPlayer() {
 	SteamAudioServer::get_singleton()->remove_local_state(&local_state);
 	auto gs = SteamAudioServer::get_singleton()->get_global_state();
 
-	iplSourceRemove(local_state.src.src, gs->sim);
+	SteamAudioServer::get_singleton()->remove_source(local_state.src.src);
 	iplSourceRelease(&local_state.src.src);
 	iplDirectEffectRelease(&local_state.fx.direct);
 	iplReflectionEffectRelease(&local_state.fx.refl);
@@ -156,8 +156,7 @@ void SteamAudioPlayer::init_local_state() {
 	IPLSourceSettings src_cfg{};
 	src_cfg.flags = static_cast<IPLSimulationFlags>(IPL_SIMULATIONFLAGS_DIRECT | IPL_SIMULATIONFLAGS_REFLECTIONS);
 	handleErr(iplSourceCreate(gs->sim, &src_cfg, &local_state.src.src));
-	iplSourceAdd(local_state.src.src, gs->sim);
-	iplSimulatorCommit(gs->sim);
+	SteamAudioServer::get_singleton()->add_source(local_state.src.src);
 
 	// TODO: check if we can't create effects globally and use their Reset functions.
 	// If we create these globally and use them for all sources, then strange things happen

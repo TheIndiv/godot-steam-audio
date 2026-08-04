@@ -25,7 +25,8 @@ void SteamAudioServer::tick() {
 
 	SteamAudio::log(SteamAudio::log_debug, "tick");
 
-	if (!is_refl_thread_processing.load()) {
+	{
+		std::lock_guard<std::mutex> scene_lock(self->scene_mux);
 		iplSceneCommit(self->global_state.scene);
 	}
 
@@ -258,7 +259,10 @@ void SteamAudioServer::run_refl_sim() {
 			continue;
 		}
 		SteamAudio::log(SteamAudio::log_debug, "running reflection sim");
-		iplSimulatorRunReflections(global_state.sim);
+		{
+			std::lock_guard<std::mutex> scene_lock(scene_mux);
+			iplSimulatorRunReflections(global_state.sim);
+		}
 		is_refl_thread_processing.store(false);
 	}
 }
@@ -285,7 +289,9 @@ void SteamAudioServer::remove_local_state(LocalSteamAudioState *ls) {
 
 void SteamAudioServer::add_static_mesh(IPLStaticMesh mesh) {
 	if (is_global_state_init.load()) {
+		std::lock_guard<std::mutex> scene_lock(scene_mux);
 		iplStaticMeshAdd(mesh, global_state.scene);
+		iplSceneCommit(global_state.scene);
 	} else {
 		static_meshes_to_add.push_back(mesh);
 	}
@@ -293,7 +299,12 @@ void SteamAudioServer::add_static_mesh(IPLStaticMesh mesh) {
 
 void SteamAudioServer::remove_static_mesh(IPLStaticMesh mesh) {
 	if (is_global_state_init.load()) {
+		// Commit before releasing the lock so the mesh is out of the committed scene before
+		// the caller (SteamAudioGeometry::destroy_geometry) is free to release its data -
+		// otherwise this raced the reflection thread (#102/#75).
+		std::lock_guard<std::mutex> scene_lock(scene_mux);
 		iplStaticMeshRemove(mesh, global_state.scene);
+		iplSceneCommit(global_state.scene);
 	} else {
 		// Probably won't happen?
 		auto it = std::find(static_meshes_to_add.begin(), static_meshes_to_add.end(), mesh);
@@ -303,9 +314,23 @@ void SteamAudioServer::remove_static_mesh(IPLStaticMesh mesh) {
 	}
 }
 
+void SteamAudioServer::add_source(IPLSource src) {
+	std::lock_guard<std::mutex> scene_lock(scene_mux);
+	iplSourceAdd(src, global_state.sim);
+	iplSimulatorCommit(global_state.sim);
+}
+
+void SteamAudioServer::remove_source(IPLSource src) {
+	std::lock_guard<std::mutex> scene_lock(scene_mux);
+	iplSourceRemove(src, global_state.sim);
+	iplSimulatorCommit(global_state.sim);
+}
+
 void SteamAudioServer::add_dynamic_mesh(IPLInstancedMesh mesh) {
 	if (is_global_state_init.load()) {
+		std::lock_guard<std::mutex> scene_lock(scene_mux);
 		iplInstancedMeshAdd(mesh, global_state.scene);
+		iplSceneCommit(global_state.scene);
 	} else {
 		SteamAudio::log(SteamAudio::log_error, "Adding a dynamic mesh, but SteamAudio is not initialized. Probably crashing soon.");
 	}
@@ -316,7 +341,9 @@ void SteamAudioServer::remove_dynamic_mesh(IPLInstancedMesh mesh) {
 		return; // We've probably already deleted the scene.
 	}
 
+	std::lock_guard<std::mutex> scene_lock(scene_mux);
 	iplInstancedMeshRemove(mesh, global_state.scene);
+	iplSceneCommit(global_state.scene);
 }
 
 SteamAudioServer::SteamAudioServer() {
