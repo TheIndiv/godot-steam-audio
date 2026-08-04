@@ -14,6 +14,7 @@
 #include "godot_cpp/classes/mesh_instance3d.hpp"
 #include "godot_cpp/classes/sphere_mesh.hpp"
 #include "godot_cpp/classes/sphere_shape3d.hpp"
+#include "godot_cpp/variant/utility_functions.hpp"
 #include "material.hpp"
 #include "phonon.h"
 #include "steam_audio.hpp"
@@ -39,9 +40,25 @@ inline IPLStaticMesh godot_mesh_to_ipl_mesh(Ref<Mesh> mesh, IPLScene scene, IPLM
 		return IPLStaticMesh{nullptr};
 	}
 
+	// A malformed/truncated index buffer (not a multiple of 3) previously walked
+	// past the end of the triangle count derived below, corrupting heap memory
+	// that Embree could read from moments later inside iplStaticMeshCreate.
+	// Drop any trailing partial triangle instead of reading/writing out of bounds.
+	int tri_count = int(tris.size()) / 3;
+	if (tri_count * 3 != tris.size()) {
+		SteamAudio::log(SteamAudio::log_warn, "Mesh surface index count is not a multiple of 3, dropping the trailing partial triangle.");
+	}
+
+	if (tri_count == 0) {
+		SteamAudio::log(SteamAudio::log_warn, "Mesh surface has no complete triangles, skipping.");
+		return IPLStaticMesh{nullptr};
+	}
+
 	std::vector<IPLVector3> ipl_verts(verts.size());
-	std::vector<IPLTriangle> ipl_tris(tris.size() / 3);
-	std::vector<IPLint32> ipl_mat_indices(tris.size() / 3);
+	std::vector<IPLTriangle> ipl_tris;
+	std::vector<IPLint32> ipl_mat_indices;
+	ipl_tris.reserve(tri_count);
+	ipl_mat_indices.reserve(tri_count);
 
 	for (int j = 0; j < verts.size(); j++) {
 		Vector3 vert = verts[j];
@@ -50,18 +67,36 @@ inline IPLStaticMesh godot_mesh_to_ipl_mesh(Ref<Mesh> mesh, IPLScene scene, IPLM
 		ipl_verts[j] = ipl_vec3_from(vert);
 	}
 
-	for (int j = 0; j < tris.size(); j += 3) {
+	// Indices out of range of the vertex buffer would also read out of bounds
+	// once handed to Embree, with no validation on the SDK side — skip any
+	// triangle referencing a vertex that doesn't exist.
+	for (int j = 0; j < tri_count * 3; j += 3) {
+		int a = int(tris[j]);
+		int b = int(tris[j + 1]);
+		int c = int(tris[j + 2]);
+		if (a < 0 || a >= verts.size() || b < 0 || b >= verts.size() || c < 0 || c >= verts.size()) {
+			SteamAudio::log(SteamAudio::log_warn, "Mesh surface triangle references an out-of-range vertex index, skipping triangle.");
+			continue;
+		}
+
 		// godot tris are cw, ipl tris are ccw
-		ipl_tris[j / 3].indices[0] = tris[j];
-		ipl_tris[j / 3].indices[1] = tris[j + 2];
-		ipl_tris[j / 3].indices[2] = tris[j + 1];
-		ipl_mat_indices[j / 3] = 0;
+		IPLTriangle ipl_tri;
+		ipl_tri.indices[0] = a;
+		ipl_tri.indices[1] = c;
+		ipl_tri.indices[2] = b;
+		ipl_tris.push_back(ipl_tri);
+		ipl_mat_indices.push_back(0);
+	}
+
+	if (ipl_tris.empty()) {
+		SteamAudio::log(SteamAudio::log_warn, "Mesh surface has no valid triangles after validation, skipping.");
+		return IPLStaticMesh{nullptr};
 	}
 
 	IPLMaterial mats[1] = { material };
 	IPLStaticMeshSettings static_mesh_cfg{};
 	static_mesh_cfg.numVertices = int(verts.size());
-	static_mesh_cfg.numTriangles = int(tris.size() / 3);
+	static_mesh_cfg.numTriangles = int(ipl_tris.size());
 	static_mesh_cfg.numMaterials = 1;
 	static_mesh_cfg.vertices = ipl_verts.data();
 	static_mesh_cfg.triangles = ipl_tris.data();
