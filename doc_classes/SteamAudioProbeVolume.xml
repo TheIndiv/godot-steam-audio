@@ -4,7 +4,7 @@
 		A box volume that bakes reflections/reverb data into probes, so [SteamAudioPlayer]s inside it can use precomputed reflections instead of the real-time simulation.
 	</brief_description>
 	<description>
-		Generates probes across a box volume (using [member probe_spacing] and [member probe_height], at a fixed height above floor/terrain geometry) and bakes a single reverb layer into them: data is calculated with both source and listener at each probe position, then interpolated at runtime from the probes nearest the listener's actual position.
+		Generates probes across a box volume - either a grid across floor/terrain geometry ([member generation_type] = Uniform Floor, using [member probe_spacing] and [member probe_height]) or a single probe at the box's center (Centroid, for small simple rooms where one averaged probe is enough) - and bakes a single reverb layer into them: data is calculated with both source and listener at each probe position, then interpolated at runtime from the probes nearest the listener's actual position.
 		Call [code]bake()[/code] after the scene's geometry ([SteamAudioGeometry], [SteamAudioPhysicsSceneBridge], ...) has already registered - baking traces rays against whatever's currently in the SteamAudio scene. Baking is synchronous and blocks until it finishes; there's no progress callback or background baking yet.
 		The baked data is saved to [member probe_data_path] (or, if empty, a path derived from the scene file and this node's name) and loaded back from there at runtime - baking only needs to happen once, typically in the editor.
 		To actually use baked data for a source, enable [member SteamAudioPlayer.baked_reflections] on its [SteamAudioPlayer].
@@ -38,11 +38,14 @@
 		<member name="probe_data_path" type="String" setter="set_probe_data_path" getter="get_probe_data_path" default="&quot;&quot;">
 			Where to save/load the baked probe data. If empty, defaults to a path derived from the scene file and this node's name.
 		</member>
+		<member name="generation_type" type="int" setter="set_generation_type" getter="get_generation_type" enum="Centroid,Uniform Floor" default="1">
+			How probes are placed within the volume. Uniform Floor (the default) scatters a grid across detected floor/terrain geometry using [member probe_spacing]/[member probe_height] - use this for rooms and corridors the listener can walk around in. Centroid places a single probe at the box's exact center, with an influence radius equal to half the box's smallest dimension; [member probe_spacing] and [member probe_height] are ignored in this mode. Use Centroid for a small, simple enclosed space (a closet, a tiny alcove) where one averaged probe is enough and a full grid bake would be wasteful.
+		</member>
 		<member name="probe_spacing" type="float" setter="set_probe_spacing" getter="get_probe_spacing" default="5.0">
-			Spacing (in meters) between neighboring probes.
+			Spacing (in meters) between neighboring probes. Only used when [member generation_type] is Uniform Floor.
 		</member>
 		<member name="probe_height" type="float" setter="set_probe_height" getter="get_probe_height" default="1.5">
-			Height (in meters) above floor/terrain geometry at which probes are generated.
+			Height (in meters) above floor/terrain geometry at which probes are generated. Only used when [member generation_type] is Uniform Floor.
 		</member>
 		<member name="num_rays" type="int" setter="set_num_rays" getter="get_num_rays" default="4096">
 			Number of rays traced from each probe when baking. Higher is more accurate and slower to bake.

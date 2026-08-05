@@ -21,6 +21,11 @@ void SteamAudioProbeVolume::_bind_methods() {
 	ADD_PROPERTY(PropertyInfo(Variant::STRING, "probe_data_path", PROPERTY_HINT_FILE, "*.iplprobes"), "set_probe_data_path", "get_probe_data_path");
 
 	ADD_GROUP("Probe Generation", "");
+	ClassDB::bind_method(D_METHOD("get_generation_type"), &SteamAudioProbeVolume::get_generation_type);
+	ClassDB::bind_method(D_METHOD("set_generation_type", "p_generation_type"), &SteamAudioProbeVolume::set_generation_type);
+	// Order matches IPLProbeGenerationType's own values (CENTROID=0, UNIFORMFLOOR=1) - see the
+	// generation_type field comment in probe_volume.hpp.
+	ADD_PROPERTY(PropertyInfo(Variant::INT, "generation_type", PROPERTY_HINT_ENUM, "Centroid,Uniform Floor"), "set_generation_type", "get_generation_type");
 	ClassDB::bind_method(D_METHOD("get_probe_spacing"), &SteamAudioProbeVolume::get_probe_spacing);
 	ClassDB::bind_method(D_METHOD("set_probe_spacing", "p_probe_spacing"), &SteamAudioProbeVolume::set_probe_spacing);
 	ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "probe_spacing", PROPERTY_HINT_RANGE, "0.5,50.0,0.1"), "set_probe_spacing", "get_probe_spacing");
@@ -172,7 +177,7 @@ bool SteamAudioProbeVolume::bake() {
 	handleErr(iplProbeArrayCreate(gs->ctx, &probe_array));
 
 	IPLProbeGenerationParams gen_params{};
-	gen_params.type = IPL_PROBEGENERATIONTYPE_UNIFORMFLOOR;
+	gen_params.type = static_cast<IPLProbeGenerationType>(generation_type);
 	gen_params.spacing = probe_spacing;
 	gen_params.height = probe_height;
 	gen_params.transform = IPLMatrix4x4{ {

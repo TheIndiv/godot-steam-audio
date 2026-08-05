@@ -35,7 +35,12 @@ protected:
 	static void _bind_methods();
 
 public:
+	// Matches IPLProbeGenerationType's own integer values (IPL_PROBEGENERATIONTYPE_CENTROID=0,
+	// _UNIFORMFLOOR=1) so the raw int can be cast straight into gen_params.type in bake().
+	// Default UNIFORMFLOOR preserves this class's original (pre-this-property) behavior.
+	int generation_type = 1;
 	Vector3 size = Vector3(10.f, 10.f, 10.f);
+	// Only used by UNIFORMFLOOR - ignored entirely when generation_type is CENTROID.
 	float probe_spacing = 5.0f;
 	float probe_height = 1.5f;
 	int num_rays = 4096;
@@ -59,6 +64,8 @@ public:
 	// see the probe_positions field comment.
 	PackedVector3Array get_probe_positions() const { return probe_positions; }
 
+	int get_generation_type() const { return generation_type; }
+	void set_generation_type(int p_generation_type) { generation_type = p_generation_type; }
 	Vector3 get_size() const { return size; }
 	void set_size(Vector3 p_size) { size = p_size; }
 	float get_probe_spacing() const { return probe_spacing; }
