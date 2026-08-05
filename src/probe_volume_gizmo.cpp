@@ -80,9 +80,15 @@ void SteamAudioEditorPlugin::_bind_methods() {}
 void SteamAudioEditorPlugin::_enter_tree() {
 	probe_volume_gizmo_plugin.instantiate();
 	add_node_3d_gizmo_plugin(probe_volume_gizmo_plugin);
+
+	probe_volume_inspector_plugin.instantiate();
+	add_inspector_plugin(probe_volume_inspector_plugin);
 }
 
 void SteamAudioEditorPlugin::_exit_tree() {
 	remove_node_3d_gizmo_plugin(probe_volume_gizmo_plugin);
 	probe_volume_gizmo_plugin.unref();
+
+	remove_inspector_plugin(probe_volume_inspector_plugin);
+	probe_volume_inspector_plugin.unref();
 }

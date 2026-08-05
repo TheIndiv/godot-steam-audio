@@ -4,6 +4,7 @@
 #include "godot_cpp/classes/editor_node3d_gizmo.hpp"
 #include "godot_cpp/classes/editor_node3d_gizmo_plugin.hpp"
 #include "godot_cpp/classes/editor_plugin.hpp"
+#include "probe_volume_inspector.hpp"
 
 using namespace godot;
 
@@ -32,6 +33,7 @@ class SteamAudioEditorPlugin : public EditorPlugin {
 
 private:
 	Ref<SteamAudioProbeVolumeGizmoPlugin> probe_volume_gizmo_plugin;
+	Ref<SteamAudioProbeVolumeInspectorPlugin> probe_volume_inspector_plugin;
 
 protected:
 	static void _bind_methods();

@@ -48,8 +48,9 @@ void init_ext(ModuleInitializationLevel p_level) {
 	}
 
 	if (p_level == MODULE_INITIALIZATION_LEVEL_EDITOR) {
-		// Phase 5 (debug visualization) - editor-only, no runtime footprint.
+		// Phase 5 (debug visualization) + Phase 2 item 2 (bake UI) - editor-only, no runtime footprint.
 		ClassDB::register_class<SteamAudioProbeVolumeGizmoPlugin>();
+		ClassDB::register_class<SteamAudioProbeVolumeInspectorPlugin>();
 		ClassDB::register_class<SteamAudioEditorPlugin>();
 		EditorPlugins::add_by_type<SteamAudioEditorPlugin>();
 	}
