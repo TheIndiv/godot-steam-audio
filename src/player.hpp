@@ -38,13 +38,14 @@ private:
 		IPLTransmissionType::IPL_TRANSMISSIONTYPE_FREQDEPENDENT,
 		false,
 		0.0f,
-		1.0f
+		1.0f,
+		false
 	};
 
 	LocalSteamAudioState local_state;
 	std::atomic<bool> is_local_state_init;
 	std::atomic<bool> can_load_local_state;
-	std::atomic<bool> cfg_dirty{false};
+	std::atomic<bool> cfg_dirty{ false };
 	bool has_warned_panning = false;
 	bool has_warned_attenuation = false;
 
@@ -107,6 +108,9 @@ public:
 
 	bool is_ambisonics_on();
 	void set_ambisonics_on(bool p_ambisonics_on);
+
+	bool is_baked_reflections_on();
+	void set_baked_reflections_on(bool p_baked_reflections_on);
 
 	void play_stream(const Ref<AudioStream> &p_stream, float p_from_offset, float p_volume_db, float p_pitch_scale);
 	Ref<AudioStream> get_inner_stream();

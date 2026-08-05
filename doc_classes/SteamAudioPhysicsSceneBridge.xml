@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<class name="SteamAudioPhysicsSceneBridge" inherits="Node3D" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://raw.githubusercontent.com/godotengine/godot/master/doc/class.xsd">
+	<brief_description>
+		Auto-registers static occlusion/reflection geometry from every [StaticBody3D]'s [CollisionShape3D] under this node.
+	</brief_description>
+	<description>
+		At [code]_ready()[/code], this node walks its own subtree for [CollisionShape3D]s that belong to a [StaticBody3D] and registers geometry for each one, the same way an individual [SteamAudioGeometry] would - without needing to add one manually per shape.
+		A [CollisionShape3D] that already has its own [SteamAudioGeometry] child is left alone, so you can still override the material or opt a specific shape out.
+		Shapes belonging to bodies that move ([RigidBody3D], [CharacterBody3D], [Area3D], ...) are skipped; use [SteamAudioDynamicGeometry] for those instead.
+		Adding shapes to the subtree after the game has started is not supported. If you move this node's transform (or any collected shape's transform) at runtime, call [code]recalculate()[/code].
+	</description>
+	<tutorials>
+	</tutorials>
+	<methods>
+		<method name="recalculate">
+			<return type="void" />
+			<description>
+				Re-scans the subtree and rebuilds the internal SteamAudio scene to reflect any changes in shapes or transforms.
+			</description>
+		</method>
+	</methods>
+	<members>
+		<member name="disabled" type="bool" setter="set_disabled" getter="is_disabled" default="false">
+			Whether the auto-registered geometry is disabled.
+		</member>
+		<member name="material" type="SteamAudioMaterial" setter="set_material" getter="get_material">
+			The material applied to every shape this node auto-registers. Shapes with their own [SteamAudioGeometry] child use that node's material instead.
+		</member>
+	</members>
+</class>

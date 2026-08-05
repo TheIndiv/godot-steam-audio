@@ -77,6 +77,9 @@ void SteamAudioPlayer::_bind_methods() {
 	ADD_GROUP("Reflection", "");
 	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "reflection"), "set_reflection_on", "is_reflection_on");
 	ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "max_reflection_distance", PROPERTY_HINT_RANGE, "0.0,20000.0,0.1"), "set_max_reflection_distance", "get_max_reflection_distance");
+	ClassDB::bind_method(D_METHOD("is_baked_reflections_on"), &SteamAudioPlayer::is_baked_reflections_on);
+	ClassDB::bind_method(D_METHOD("set_baked_reflections_on", "p_baked_reflections_on"), &SteamAudioPlayer::set_baked_reflections_on);
+	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "baked_reflections"), "set_baked_reflections_on", "is_baked_reflections_on");
 
 	ADD_GROUP("Directivity", "");
 	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "directivity"), "set_directivity_on", "is_directivity_on");
@@ -113,6 +116,23 @@ SteamAudioPlayer::~SteamAudioPlayer() {
 
 	is_local_state_init.store(false);
 	can_load_local_state.store(false);
+
+	// _mix() (stream.cpp) re-checks ls->src.player and its own parent pointer right after
+	// acquiring this same lock, specifically to bail out instead of touching IPL resources if
+	// the player is mid-destruction. But nothing ever cleared either pointer, so a _mix() call
+	// that blocked on this lock would still unblock (once we release it at scope exit) and run
+	// against handles/buffers we already released below. Null both out first, before releasing
+	// anything, so those checks actually catch a racing _mix() instead of always reading a
+	// dangling "still valid" pointer. Same failure class as scene-reload teardown races
+	// (#102/#75), but between AudioServer's mix thread and a single player's own destructor.
+	local_state.src.player = nullptr;
+	if (!pb.is_null()) {
+		auto playback = dynamic_cast<SteamAudioStreamPlayback *>(pb.ptr());
+		if (playback != nullptr) {
+			playback->parent = nullptr;
+		}
+	}
+
 	SteamAudioServer::get_singleton()->remove_local_state(&local_state);
 	auto gs = SteamAudioServer::get_singleton()->get_global_state();
 
@@ -131,11 +151,6 @@ SteamAudioPlayer::~SteamAudioPlayer() {
 	iplAudioBufferFree(gs->ctx, &local_state.bufs.mono);
 	iplAudioBufferFree(gs->ctx, &local_state.bufs.refl_ambi);
 	iplAudioBufferFree(gs->ctx, &local_state.bufs.refl_out);
-
-	if (!pb.is_null()) {
-		auto playback = dynamic_cast<SteamAudioStreamPlayback *>(pb.ptr());
-		playback->parent = nullptr;
-	}
 }
 
 LocalSteamAudioState *SteamAudioPlayer::get_local_state() {
@@ -330,49 +345,111 @@ Ref<AudioStreamPlayback> SteamAudioPlayer::get_inner_stream_playback() {
 }
 
 float SteamAudioPlayer::get_occlusion_radius() { return cfg.occ_radius; }
-void SteamAudioPlayer::set_occlusion_radius(float p_occlusion_radius) { cfg.occ_radius = p_occlusion_radius; cfg_dirty.store(true); }
+void SteamAudioPlayer::set_occlusion_radius(float p_occlusion_radius) {
+	cfg.occ_radius = p_occlusion_radius;
+	cfg_dirty.store(true);
+}
 int SteamAudioPlayer::get_occlusion_samples() { return cfg.occ_samples; }
-void SteamAudioPlayer::set_occlusion_samples(int p_occlusion_samples) { cfg.occ_samples = p_occlusion_samples; cfg_dirty.store(true); }
+void SteamAudioPlayer::set_occlusion_samples(int p_occlusion_samples) {
+	cfg.occ_samples = p_occlusion_samples;
+	cfg_dirty.store(true);
+}
 int SteamAudioPlayer::get_transmission_rays() { return cfg.transm_rays; }
-void SteamAudioPlayer::set_transmission_rays(int p_transmission_rays) { cfg.transm_rays = p_transmission_rays; cfg_dirty.store(true); }
+void SteamAudioPlayer::set_transmission_rays(int p_transmission_rays) {
+	cfg.transm_rays = p_transmission_rays;
+	cfg_dirty.store(true);
+}
 float SteamAudioPlayer::get_min_attenuation_dist() { return cfg.min_attn_dist; }
-void SteamAudioPlayer::set_min_attenuation_dist(float p_min_attenuation_dist) { cfg.min_attn_dist = p_min_attenuation_dist; cfg_dirty.store(true); }
+void SteamAudioPlayer::set_min_attenuation_dist(float p_min_attenuation_dist) {
+	cfg.min_attn_dist = p_min_attenuation_dist;
+	cfg_dirty.store(true);
+}
 int SteamAudioPlayer::get_ambisonics_order() { return cfg.ambisonics_order; }
-void SteamAudioPlayer::set_ambisonics_order(int p_ambisonics_order) { cfg.ambisonics_order = p_ambisonics_order; cfg_dirty.store(true); }
+void SteamAudioPlayer::set_ambisonics_order(int p_ambisonics_order) {
+	cfg.ambisonics_order = p_ambisonics_order;
+	cfg_dirty.store(true);
+}
 float SteamAudioPlayer::get_max_reflection_dist() { return cfg.max_refl_dist; }
-void SteamAudioPlayer::set_max_reflection_dist(float p_max_reflection_dist) { cfg.max_refl_dist = p_max_reflection_dist; cfg_dirty.store(true); }
+void SteamAudioPlayer::set_max_reflection_dist(float p_max_reflection_dist) {
+	cfg.max_refl_dist = p_max_reflection_dist;
+	cfg_dirty.store(true);
+}
 
 bool SteamAudioPlayer::is_dist_attn_on() { return cfg.is_dist_attn_on; }
-void SteamAudioPlayer::set_dist_attn_on(bool p_dist_attn_on) { cfg.is_dist_attn_on = p_dist_attn_on; cfg_dirty.store(true); }
+void SteamAudioPlayer::set_dist_attn_on(bool p_dist_attn_on) {
+	cfg.is_dist_attn_on = p_dist_attn_on;
+	cfg_dirty.store(true);
+}
 
 bool SteamAudioPlayer::is_air_absorp_on() { return cfg.is_air_absorp_on; }
-void SteamAudioPlayer::set_air_absorp_on(bool p_air_absorp_on) { cfg.is_air_absorp_on = p_air_absorp_on; cfg_dirty.store(true); }
+void SteamAudioPlayer::set_air_absorp_on(bool p_air_absorp_on) {
+	cfg.is_air_absorp_on = p_air_absorp_on;
+	cfg_dirty.store(true);
+}
 float SteamAudioPlayer::get_air_absorption_low() { return cfg.air_absorption_low; }
-void SteamAudioPlayer::set_air_absorption_low(float p_air_absorption_low) { cfg.air_absorption_low = p_air_absorption_low; cfg_dirty.store(true); }
+void SteamAudioPlayer::set_air_absorption_low(float p_air_absorption_low) {
+	cfg.air_absorption_low = p_air_absorption_low;
+	cfg_dirty.store(true);
+}
 float SteamAudioPlayer::get_air_absorption_mid() { return cfg.air_absorption_mid; }
-void SteamAudioPlayer::set_air_absorption_mid(float p_air_absorption_mid) { cfg.air_absorption_mid = p_air_absorption_mid; cfg_dirty.store(true); }
+void SteamAudioPlayer::set_air_absorption_mid(float p_air_absorption_mid) {
+	cfg.air_absorption_mid = p_air_absorption_mid;
+	cfg_dirty.store(true);
+}
 float SteamAudioPlayer::get_air_absorption_high() { return cfg.air_absorption_high; }
-void SteamAudioPlayer::set_air_absorption_high(float p_air_absorption_high) { cfg.air_absorption_high = p_air_absorption_high; cfg_dirty.store(true); }
+void SteamAudioPlayer::set_air_absorption_high(float p_air_absorption_high) {
+	cfg.air_absorption_high = p_air_absorption_high;
+	cfg_dirty.store(true);
+}
 IPLAirAbsorptionModelType SteamAudioPlayer::get_air_absorption_model_type() { return cfg.air_absorption_model_type; }
-void SteamAudioPlayer::set_air_absorption_model_type(IPLAirAbsorptionModelType p_air_absorption_model_type) { cfg.air_absorption_model_type = p_air_absorption_model_type; cfg_dirty.store(true); }
+void SteamAudioPlayer::set_air_absorption_model_type(IPLAirAbsorptionModelType p_air_absorption_model_type) {
+	cfg.air_absorption_model_type = p_air_absorption_model_type;
+	cfg_dirty.store(true);
+}
 
 bool SteamAudioPlayer::is_reflection_on() { return cfg.is_reflection_on; }
-void SteamAudioPlayer::set_reflection_on(bool p_reflection_on) { cfg.is_reflection_on = p_reflection_on; cfg_dirty.store(true); }
+void SteamAudioPlayer::set_reflection_on(bool p_reflection_on) {
+	cfg.is_reflection_on = p_reflection_on;
+	cfg_dirty.store(true);
+}
+bool SteamAudioPlayer::is_baked_reflections_on() { return cfg.use_baked_reflections; }
+void SteamAudioPlayer::set_baked_reflections_on(bool p_baked_reflections_on) {
+	cfg.use_baked_reflections = p_baked_reflections_on;
+	cfg_dirty.store(true);
+}
 bool SteamAudioPlayer::is_occlusion_on() { return cfg.is_occlusion_on; }
-void SteamAudioPlayer::set_occlusion_on(bool p_occlusion_on) { cfg.is_occlusion_on = p_occlusion_on; cfg_dirty.store(true); }
+void SteamAudioPlayer::set_occlusion_on(bool p_occlusion_on) {
+	cfg.is_occlusion_on = p_occlusion_on;
+	cfg_dirty.store(true);
+}
 
 IPLTransmissionType SteamAudioPlayer::get_transmission_type() { return cfg.transmission_type; }
-void SteamAudioPlayer::set_transmission_type(IPLTransmissionType p_transmission_type) { cfg.transmission_type = p_transmission_type; cfg_dirty.store(true); }
+void SteamAudioPlayer::set_transmission_type(IPLTransmissionType p_transmission_type) {
+	cfg.transmission_type = p_transmission_type;
+	cfg_dirty.store(true);
+}
 
 bool SteamAudioPlayer::is_directivity_on() { return cfg.is_directivity_on; }
-void SteamAudioPlayer::set_directivity_on(bool p_directivity_on) { cfg.is_directivity_on = p_directivity_on; cfg_dirty.store(true); }
+void SteamAudioPlayer::set_directivity_on(bool p_directivity_on) {
+	cfg.is_directivity_on = p_directivity_on;
+	cfg_dirty.store(true);
+}
 float SteamAudioPlayer::get_dipole_weight() { return cfg.dipole_weight; }
-void SteamAudioPlayer::set_dipole_weight(float p_dipole_weight) { cfg.dipole_weight = p_dipole_weight; cfg_dirty.store(true); }
+void SteamAudioPlayer::set_dipole_weight(float p_dipole_weight) {
+	cfg.dipole_weight = p_dipole_weight;
+	cfg_dirty.store(true);
+}
 float SteamAudioPlayer::get_dipole_power() { return cfg.dipole_power; }
-void SteamAudioPlayer::set_dipole_power(float p_dipole_power) { cfg.dipole_power = p_dipole_power; cfg_dirty.store(true); }
+void SteamAudioPlayer::set_dipole_power(float p_dipole_power) {
+	cfg.dipole_power = p_dipole_power;
+	cfg_dirty.store(true);
+}
 
 bool SteamAudioPlayer::is_ambisonics_on() { return cfg.is_ambisonics_on; }
-void SteamAudioPlayer::set_ambisonics_on(bool p_ambisonics_on) { cfg.is_ambisonics_on = p_ambisonics_on; cfg_dirty.store(true); }
+void SteamAudioPlayer::set_ambisonics_on(bool p_ambisonics_on) {
+	cfg.is_ambisonics_on = p_ambisonics_on;
+	cfg_dirty.store(true);
+}
 
 PackedStringArray SteamAudioPlayer::_get_configuration_warnings() const {
 	PackedStringArray res;

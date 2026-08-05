@@ -63,6 +63,7 @@ struct SteamAudioSourceConfig {
 	bool is_directivity_on;
 	float dipole_weight;
 	float dipole_power;
+	bool use_baked_reflections;
 };
 
 struct SteamAudioEffects {
@@ -92,6 +93,10 @@ struct LocalSteamAudioState {
 	SteamAudioEffects fx;
 	SteamAudioSourceConfig cfg;
 	std::shared_mutex mux;
+	// Stamped from SteamAudioServer::local_states_epoch when this state is registered;
+	// lets the reflection thread and diagnostics tell which registration generation a
+	// given state belongs to.
+	uint64_t epoch = 0;
 };
 
 inline int ambisonic_channels_from(int order) {
@@ -113,6 +118,18 @@ inline IPLCoordinateSpace3 ipl_coords_from(const Transform3D &trf) {
 	coords.ahead = ipl_vec3_from(fwd);
 
 	return coords;
+}
+
+// Single fixed data layer used by baked reflections in this fork (Phase 2 scope): a "reverb"
+// variation, where baked data is computed with both source and listener at each probe position,
+// then interpolated at runtime from the probes nearest the actual listener. Static-source/
+// static-listener variations (IPL_BAKEDDATAVARIATION_STATICSOURCE/STATICLISTENER) and pathing
+// are a possible future layer, not implemented yet.
+inline IPLBakedDataIdentifier reverb_baked_data_identifier() {
+	IPLBakedDataIdentifier id{};
+	id.type = IPL_BAKEDDATATYPE_REFLECTIONS;
+	id.variation = IPL_BAKEDDATAVARIATION_REVERB;
+	return id;
 }
 
 inline void handleErr(IPLerror err) {

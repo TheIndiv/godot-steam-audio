@@ -101,7 +101,7 @@ void SteamAudioServer::tick() {
 	IPLSimulationSharedInputs shared_inputs{};
 	shared_inputs.listener = self->global_state.listener_coords;
 	iplSimulatorSetSharedInputs(self->global_state.sim,
-			IPL_SIMULATIONFLAGS_DIRECT, &shared_inputs);
+								IPL_SIMULATIONFLAGS_DIRECT, &shared_inputs);
 	iplSimulatorRunDirect(self->global_state.sim);
 
 	SteamAudio::log(SteamAudio::log_debug, "tick: direct sim complete");
@@ -170,6 +170,10 @@ void SteamAudioServer::tick() {
 		IPLSimulationInputs inputs{};
 		inputs.flags = IPL_SIMULATIONFLAGS_REFLECTIONS;
 		inputs.source = src_coords;
+		if (ls->cfg.use_baked_reflections) {
+			inputs.baked = IPL_TRUE;
+			inputs.bakedDataIdentifier = reverb_baked_data_identifier();
+		}
 
 		iplSourceSetInputs(ls->src.src, IPL_SIMULATIONFLAGS_REFLECTIONS, &inputs);
 	}
@@ -189,6 +193,7 @@ void SteamAudioServer::tick() {
 	{
 		// notify reflection thread and tell it it can start running again
 		std::unique_lock<std::mutex> lock(refl_mux);
+		refl_epoch_snapshot.store(local_states_epoch.load(std::memory_order_acquire), std::memory_order_release);
 		is_refl_thread_processing.store(true);
 		cv.notify_one();
 	}
@@ -229,6 +234,9 @@ GlobalSteamAudioState *SteamAudioServer::get_global_state(bool should_init) {
 			global_state.ctx, global_state.audio_cfg, global_state.hrtf);
 
 	iplSimulatorSetScene(global_state.sim, global_state.scene);
+	for (auto batch : probe_batches_to_add) {
+		iplSimulatorAddProbeBatch(global_state.sim, batch);
+	}
 	iplSimulatorCommit(global_state.sim);
 
 	is_global_state_init.store(true);
@@ -250,11 +258,15 @@ void SteamAudioServer::run_refl_sim() {
 			std::unique_lock<std::mutex> lock(this->refl_mux);
 			cv.wait(lock, [&] { return is_refl_thread_processing.load() || !is_running.load(); });
 		}
-		// if someone removed a local state, then the reflection sim might crash, so
-		// we need it to wait for another tick.
-		// XXX: what happens if a local state is removed in the middle of a sim run...?
-		if (local_states_have_changed.load()) {
-			local_states_have_changed.store(false);
+		if (!is_running.load()) {
+			break;
+		}
+		// A local state was added/removed since tick() prepared this round's sim inputs
+		// (which may reference a source that no longer exists) - skip and wait for a fresh
+		// round built against the current registration generation. add_source/remove_source
+		// still block on scene_mux against an in-flight iplSimulatorRunReflections below, so
+		// this is a staleness check on top of that, not the only thing preventing a race.
+		if (local_states_epoch.load(std::memory_order_acquire) != refl_epoch_snapshot.load(std::memory_order_acquire)) {
 			is_refl_thread_processing.store(false);
 			continue;
 		}
@@ -274,6 +286,7 @@ void SteamAudioServer::add_listener(SteamAudioListener *lis) {
 
 void SteamAudioServer::add_local_state(LocalSteamAudioState *ls) {
 	std::lock_guard<std::mutex> lock(self->tick_mux);
+	ls->epoch = self->local_states_epoch.fetch_add(1, std::memory_order_acq_rel) + 1;
 	self->local_states.push_back(ls);
 }
 
@@ -284,7 +297,7 @@ void SteamAudioServer::remove_local_state(LocalSteamAudioState *ls) {
 		return;
 	}
 	local_states.erase(it);
-	local_states_have_changed.store(true);
+	local_states_epoch.fetch_add(1, std::memory_order_acq_rel);
 }
 
 void SteamAudioServer::add_static_mesh(IPLStaticMesh mesh) {
@@ -326,6 +339,29 @@ void SteamAudioServer::remove_source(IPLSource src) {
 	iplSimulatorCommit(global_state.sim);
 }
 
+void SteamAudioServer::add_probe_batch(IPLProbeBatch batch) {
+	if (is_global_state_init.load()) {
+		std::lock_guard<std::mutex> scene_lock(scene_mux);
+		iplSimulatorAddProbeBatch(global_state.sim, batch);
+		iplSimulatorCommit(global_state.sim);
+	} else {
+		probe_batches_to_add.push_back(batch);
+	}
+}
+
+void SteamAudioServer::remove_probe_batch(IPLProbeBatch batch) {
+	if (is_global_state_init.load()) {
+		std::lock_guard<std::mutex> scene_lock(scene_mux);
+		iplSimulatorRemoveProbeBatch(global_state.sim, batch);
+		iplSimulatorCommit(global_state.sim);
+	} else {
+		auto it = std::find(probe_batches_to_add.begin(), probe_batches_to_add.end(), batch);
+		if (it != probe_batches_to_add.end()) {
+			probe_batches_to_add.erase(it);
+		}
+	}
+}
+
 void SteamAudioServer::add_dynamic_mesh(IPLInstancedMesh mesh) {
 	if (is_global_state_init.load()) {
 		std::lock_guard<std::mutex> scene_lock(scene_mux);
@@ -351,7 +387,6 @@ SteamAudioServer::SteamAudioServer() {
 	is_global_state_init.store(false);
 	is_refl_thread_processing.store(false);
 	is_running.store(true);
-	local_states_have_changed.store(false);
 }
 
 SteamAudioServer::~SteamAudioServer() {
@@ -381,7 +416,7 @@ SteamAudioServer::~SteamAudioServer() {
 void SteamAudioServer::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("tick"), &SteamAudioServer::tick);
 	ClassDB::bind_static_method("SteamAudioServer", D_METHOD("get_singleton"),
-			&SteamAudioServer::get_singleton);
+								&SteamAudioServer::get_singleton);
 }
 
 SteamAudioServer *SteamAudioServer::get_singleton() {

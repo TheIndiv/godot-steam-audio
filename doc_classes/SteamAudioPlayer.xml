@@ -36,6 +36,9 @@
 		<member name="ambisonics_order" type="int" setter="set_ambisonics_order" getter="get_ambisonics_order" default="1">
 			See [url=https://valvesoftware.github.io/steam-audio/doc/capi/ambisonics-encode-effect.html#_CPPv4N31IPLAmbisonicsEncodeEffectParams5orderE]IPLAmbisonicsEncodeEffectParams.order[/url].
 		</member>
+		<member name="baked_reflections" type="bool" setter="set_baked_reflections_on" getter="is_baked_reflections_on" default="false">
+			Whether this source's reflections are read from a [SteamAudioProbeVolume]'s baked data instead of the real-time reflection simulation. Requires a [SteamAudioProbeVolume] covering the source's area to have been baked and registered, and [member reflection] to also be enabled.
+		</member>
 		<member name="distance_attenuation" type="bool" setter="set_dist_attn_on" getter="is_dist_attn_on" default="false">
             Whether SteamAudio distance attenuation is enabled. Keep in mind that this is disabled by default, and enabling it will disable Godot's built-in attenuation, which you can only re-enable when you disable this.
 		</member>

@@ -1,0 +1,45 @@
+[gd_scene load_steps=4 format=3]
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_floor"]
+size = Vector3(20, 1, 20)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_wall"]
+size = Vector3(1, 4, 10)
+
+[sub_resource type="BoxMesh" id="BoxMesh_debug"]
+size = Vector3(20, 1, 20)
+
+[node name="TestPhysicsBridge" type="Node3D"]
+
+[node name="SteamAudioConfig" type="SteamAudioConfig" parent="."]
+scene_type = 0
+
+[node name="SteamAudioListener" type="Node3D" parent="."]
+
+[node name="SteamAudioListener2" type="SteamAudioListener" parent="SteamAudioListener"]
+
+[node name="Bridge" type="SteamAudioPhysicsSceneBridge" parent="."]
+
+[node name="Floor" type="StaticBody3D" parent="Bridge"]
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Bridge/Floor"]
+shape = SubResource("BoxShape3D_floor")
+
+[node name="Wall" type="StaticBody3D" parent="Bridge"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5, 2, 0)
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Bridge/Wall"]
+shape = SubResource("BoxShape3D_wall")
+
+[node name="OverriddenWall" type="StaticBody3D" parent="Bridge"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -5, 2, 0)
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Bridge/OverriddenWall"]
+shape = SubResource("BoxShape3D_wall")
+
+[node name="SteamAudioGeometry" type="SteamAudioGeometry" parent="Bridge/OverriddenWall/CollisionShape3D"]
+
+[node name="MovingBody" type="RigidBody3D" parent="Bridge"]
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Bridge/MovingBody"]
+shape = SubResource("BoxShape3D_wall")

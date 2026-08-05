@@ -22,7 +22,12 @@ private:
 	std::atomic<bool> is_global_state_init;
 	std::atomic<bool> is_refl_thread_processing;
 	std::atomic<bool> is_running;
-	std::atomic<bool> local_states_have_changed;
+	// Bumped by add_local_state/remove_local_state. tick() snapshots this into
+	// refl_epoch_snapshot right before waking the reflection thread; run_refl_sim compares
+	// the two on wake and skips the round if a state was added/removed since the snapshot
+	// was taken, since the sim inputs it prepared may reference a now-stale source.
+	std::atomic<uint64_t> local_states_epoch{ 0 };
+	std::atomic<uint64_t> refl_epoch_snapshot{ 0 };
 	std::mutex init_mux;
 	std::mutex refl_mux;
 	std::mutex tick_mux;
@@ -34,6 +39,8 @@ private:
 	// meshes to add to the global state scene after it's initialized.
 	std::vector<IPLStaticMesh> static_meshes_to_add;
 	std::vector<IPLStaticMesh> dynamic_meshes_to_add;
+	// probe batches to add to the simulator after it's initialized.
+	std::vector<IPLProbeBatch> probe_batches_to_add;
 
 	// TODO: allow for multiple
 	SteamAudioListener *listener = nullptr;
@@ -62,6 +69,8 @@ public:
 	void remove_dynamic_mesh(IPLInstancedMesh mesh);
 	void add_source(IPLSource src);
 	void remove_source(IPLSource src);
+	void add_probe_batch(IPLProbeBatch batch);
+	void remove_probe_batch(IPLProbeBatch batch);
 
 	void tick();
 };
