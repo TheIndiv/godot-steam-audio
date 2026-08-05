@@ -8,6 +8,7 @@
 #include <phonon.h>
 #include <godot_cpp/core/object.hpp>
 #include <godot_cpp/core/property_info.hpp>
+#include <cstring>
 
 SteamAudioStream::SteamAudioStream() {}
 SteamAudioStream::~SteamAudioStream() {}
@@ -137,6 +138,11 @@ int32_t SteamAudioStreamPlayback::_mix(AudioFrame *buffer, float rate_scale, int
 				&ls->bufs.ambi, &ls->bufs.out);
 		SteamAudio::log(SteamAudio::log_debug, "mixing: finished ambisonics");
 	} else {
+		// iplAudioBufferMix adds into the destination instead of replacing it; clear first or it
+		// accumulates every callback into runaway buzzing (upstream #128).
+		for (int i = 0; i < ls->bufs.out.numChannels; i++) {
+			memset(ls->bufs.out.data[i], 0, ls->bufs.out.numSamples * sizeof(float));
+		}
 		iplAudioBufferMix(gs->ctx, &ls->bufs.direct, &ls->bufs.out);
 	}
 
