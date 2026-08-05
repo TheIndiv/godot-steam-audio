@@ -108,6 +108,18 @@ SteamAudioPlayer::SteamAudioPlayer() {
 }
 SteamAudioPlayer::~SteamAudioPlayer() {
 	SteamAudio::log(SteamAudio::log_debug, "destroying player");
+
+	// Must run first, before anything else, and must never be nested with local_state.mux below
+	// (see the parent_mux/detach_all_playbacks comments in stream.hpp/.cpp for why that ordering
+	// is what keeps this deadlock-safe against _mix()). Blocks until any _mix() call already in
+	// flight - on this or any other playback this stream ever instantiated, not just the one
+	// cached in `pb` - finishes, then nulls every playback's `parent` so none of them can start a
+	// new _mix() call against this player once we proceed.
+	auto str = dynamic_cast<SteamAudioStream *>(get_stream().ptr());
+	if (str != nullptr) {
+		str->detach_all_playbacks();
+	}
+
 	if (!is_local_state_init.load()) {
 		return;
 	}
@@ -116,22 +128,7 @@ SteamAudioPlayer::~SteamAudioPlayer() {
 
 	is_local_state_init.store(false);
 	can_load_local_state.store(false);
-
-	// _mix() (stream.cpp) re-checks ls->src.player and its own parent pointer right after
-	// acquiring this same lock, specifically to bail out instead of touching IPL resources if
-	// the player is mid-destruction. But nothing ever cleared either pointer, so a _mix() call
-	// that blocked on this lock would still unblock (once we release it at scope exit) and run
-	// against handles/buffers we already released below. Null both out first, before releasing
-	// anything, so those checks actually catch a racing _mix() instead of always reading a
-	// dangling "still valid" pointer. Same failure class as scene-reload teardown races
-	// (#102/#75), but between AudioServer's mix thread and a single player's own destructor.
 	local_state.src.player = nullptr;
-	if (!pb.is_null()) {
-		auto playback = dynamic_cast<SteamAudioStreamPlayback *>(pb.ptr());
-		if (playback != nullptr) {
-			playback->parent = nullptr;
-		}
-	}
 
 	SteamAudioServer::get_singleton()->remove_local_state(&local_state);
 	auto gs = SteamAudioServer::get_singleton()->get_global_state();

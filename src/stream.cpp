@@ -8,6 +8,7 @@
 #include <phonon.h>
 #include <godot_cpp/core/object.hpp>
 #include <godot_cpp/core/property_info.hpp>
+#include <algorithm>
 #include <cstring>
 
 SteamAudioStream::SteamAudioStream() {}
@@ -20,6 +21,12 @@ Ref<AudioStreamPlayback> SteamAudioStream::_instantiate_playback() const {
 	playback.instantiate();
 	playback->set_stream(stream);
 	playback->parent = parent;
+	playback->registry = registry;
+
+	{
+		std::lock_guard lock(registry->mux);
+		registry->live.push_back(playback.ptr());
+	}
 
 	return playback;
 }
@@ -27,13 +34,39 @@ Ref<AudioStreamPlayback> SteamAudioStream::_instantiate_playback() const {
 void SteamAudioStream::set_stream(Ref<AudioStream> p_stream) { stream = p_stream; }
 Ref<AudioStream> SteamAudioStream::get_stream() { return this->stream; }
 
+void SteamAudioStream::detach_all_playbacks() const {
+	std::lock_guard lock(registry->mux);
+	for (SteamAudioStreamPlayback *p : registry->live) {
+		std::lock_guard plock(p->parent_mux);
+		p->parent = nullptr;
+	}
+}
+
 // ----------------------------------------------------
 // SteamAudioStreamPlayback
 
 SteamAudioStreamPlayback::SteamAudioStreamPlayback() {}
-SteamAudioStreamPlayback::~SteamAudioStreamPlayback() {}
+SteamAudioStreamPlayback::~SteamAudioStreamPlayback() {
+	// Must run before any member is torn down: SteamAudioStream::detach_all_playbacks() holds
+	// registry->mux while it locks each live playback's parent_mux in turn, so this blocks here
+	// until that finishes rather than letting parent_mux (or `this`) get destroyed out from
+	// under a detach_all_playbacks() call already in progress. `registry` is a shared_ptr, so
+	// this is safe even if the originating SteamAudioStream was already destroyed.
+	if (registry) {
+		std::lock_guard lock(registry->mux);
+		auto it = std::find(registry->live.begin(), registry->live.end(), this);
+		if (it != registry->live.end()) {
+			registry->live.erase(it);
+		}
+	}
+}
 
 int32_t SteamAudioStreamPlayback::_mix(AudioFrame *buffer, float rate_scale, int32_t frames) {
+	// Held for the entire function, always taken before ls->mux below - see the comment on
+	// parent_mux in stream.hpp. This is what makes `parent` (and everything reached through it)
+	// safe to dereference for the rest of _mix(): ~SteamAudioPlayer() cannot get past
+	// detach_all_playbacks() while this lock is held, so the player can't be mid-destruction.
+	std::unique_lock plock(parent_mux);
 	if (parent == nullptr) {
 		return frames;
 	}
@@ -59,10 +92,6 @@ int32_t SteamAudioStreamPlayback::_mix(AudioFrame *buffer, float rate_scale, int
 	}
 	std::unique_lock lock(ls->mux);
 
-	// Some extra checks because at this point parent may have been deleted
-	if (parent == nullptr) {
-		return frames;
-	}
 	ls = parent->get_local_state();
 	if (ls == nullptr || !ls->src.player) {
 		return frames;
