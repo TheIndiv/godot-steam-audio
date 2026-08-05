@@ -244,6 +244,11 @@ bool SteamAudioProbeVolume::bake() {
 	iplSerializedObjectRelease(&ser_obj);
 
 	register_probes();
+	// Nothing else invalidates the gizmo when probe_positions changes - without this, the
+	// SteamAudioProbeVolumeGizmoPlugin box shows up immediately (its own property, redrawn
+	// on selection) but the per-probe markers stay invisible until something else happens to
+	// trigger a redraw (reselecting the node, editing another property, etc.).
+	update_gizmos();
 	return ok;
 }
 
