@@ -9,10 +9,12 @@
 #include "material.hpp"
 #include "player.hpp"
 #include "probe_volume.hpp"
+#include "probe_volume_gizmo.hpp"
 #include "server.hpp"
 #include "stream.hpp"
 
 #include <gdextension_interface.h>
+#include <godot_cpp/classes/editor_plugin_registration.hpp>
 #include <godot_cpp/core/class_db.hpp>
 #include <godot_cpp/core/defs.hpp>
 #include <godot_cpp/godot.hpp>
@@ -22,7 +24,8 @@ using namespace godot;
 SteamAudioServer *srv;
 
 void init_ext(ModuleInitializationLevel p_level) {
-	if (p_level != MODULE_INITIALIZATION_LEVEL_SCENE && p_level != MODULE_INITIALIZATION_LEVEL_SERVERS) {
+	if (p_level != MODULE_INITIALIZATION_LEVEL_SCENE && p_level != MODULE_INITIALIZATION_LEVEL_SERVERS &&
+			p_level != MODULE_INITIALIZATION_LEVEL_EDITOR) {
 		return;
 	}
 
@@ -43,6 +46,13 @@ void init_ext(ModuleInitializationLevel p_level) {
 		GDREGISTER_CLASS(SteamAudioServer);
 		srv = memnew(SteamAudioServer);
 	}
+
+	if (p_level == MODULE_INITIALIZATION_LEVEL_EDITOR) {
+		// Phase 5 (debug visualization) - editor-only, no runtime footprint.
+		ClassDB::register_class<SteamAudioProbeVolumeGizmoPlugin>();
+		ClassDB::register_class<SteamAudioEditorPlugin>();
+		EditorPlugins::add_by_type<SteamAudioEditorPlugin>();
+	}
 }
 
 void uninit_ext(ModuleInitializationLevel p_level) {
@@ -57,6 +67,10 @@ void uninit_ext(ModuleInitializationLevel p_level) {
 		// Should call this to not leak, but thread->wait_for_finish() crashes...
 		// the program is exiting anyway so I'm not too concerned
 		// memdelete(srv);
+	}
+
+	if (p_level == MODULE_INITIALIZATION_LEVEL_EDITOR) {
+		EditorPlugins::remove_by_type<SteamAudioEditorPlugin>();
 	}
 }
 
