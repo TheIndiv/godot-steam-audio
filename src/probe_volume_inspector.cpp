@@ -1,5 +1,7 @@
 #include "probe_volume_inspector.hpp"
 #include "godot_cpp/classes/button.hpp"
+#include "godot_cpp/classes/editor_interface.hpp"
+#include "godot_cpp/classes/theme.hpp"
 #include "godot_cpp/classes/v_box_container.hpp"
 #include "probe_volume.hpp"
 
@@ -11,7 +13,7 @@ bool SteamAudioProbeVolumeInspectorPlugin::_can_handle(Object *p_object) const {
 	return Object::cast_to<SteamAudioProbeVolume>(p_object) != nullptr;
 }
 
-void SteamAudioProbeVolumeInspectorPlugin::_parse_end(Object *p_object) {
+void SteamAudioProbeVolumeInspectorPlugin::_parse_begin(Object *p_object) {
 	auto *volume = Object::cast_to<SteamAudioProbeVolume>(p_object);
 	if (volume == nullptr) {
 		return;
@@ -21,6 +23,12 @@ void SteamAudioProbeVolumeInspectorPlugin::_parse_end(Object *p_object) {
 
 	auto *button = memnew(Button);
 	button->set_text("Bake Probes");
+	// Same icon NavigationRegion3D's "Bake NavigationMesh" button uses - Steam Audio has no
+	// icon of its own for this action, and this reads as the established "bake" convention.
+	Ref<Theme> editor_theme = EditorInterface::get_singleton()->get_editor_theme();
+	if (editor_theme.is_valid() && editor_theme->has_icon("Bake", "EditorIcons")) {
+		button->set_button_icon(editor_theme->get_icon("Bake", "EditorIcons"));
+	}
 	container->add_child(button);
 
 	auto *status_label = memnew(Label);

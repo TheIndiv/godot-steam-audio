@@ -7,8 +7,9 @@
 
 using namespace godot;
 
-// Phase 2 item 2 (bake UI): a "Bake Probes" button + status label at the bottom of a
-// SteamAudioProbeVolume's Inspector, since bake() otherwise has no editor affordance beyond a
+// Phase 2 item 2 (bake UI): a "Bake Probes" button + status label at the top of a
+// SteamAudioProbeVolume's Inspector (matches NavigationRegion3D's own "Bake NavigationMesh"
+// placement/icon convention), since bake() otherwise has no editor affordance beyond a
 // hand-written EditorScript. bake() is still synchronous/blocking (no progress signal yet) -
 // the editor will visibly hang for the bake's duration, same as calling it any other way.
 class SteamAudioProbeVolumeInspectorPlugin : public EditorInspectorPlugin {
@@ -19,7 +20,7 @@ protected:
 
 public:
 	bool _can_handle(Object *p_object) const override;
-	void _parse_end(Object *p_object) override;
+	void _parse_begin(Object *p_object) override;
 
 	void _on_bake_pressed(Node *p_volume, Label *p_status_label);
 };
