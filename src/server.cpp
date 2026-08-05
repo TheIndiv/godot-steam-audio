@@ -327,6 +327,15 @@ void SteamAudioServer::remove_static_mesh(IPLStaticMesh mesh) {
 	}
 }
 
+void SteamAudioServer::release_static_mesh(IPLStaticMesh &mesh) {
+	// remove_static_mesh already commits the mesh out of the scene under scene_mux, but that
+	// alone doesn't stop the reflection thread from being mid-iplSimulatorRunReflections
+	// against the pre-commit scene at the instant a caller frees the mesh's data right after -
+	// same failure class as #102/#75. Guard the actual release with the same lock.
+	std::lock_guard<std::mutex> scene_lock(scene_mux);
+	iplStaticMeshRelease(&mesh);
+}
+
 void SteamAudioServer::add_source(IPLSource src) {
 	std::lock_guard<std::mutex> scene_lock(scene_mux);
 	iplSourceAdd(src, global_state.sim);

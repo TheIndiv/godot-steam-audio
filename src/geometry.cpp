@@ -107,7 +107,7 @@ void SteamAudioGeometry::destroy_geometry() {
 	created.store(false);
 
 	for (auto &mesh : meshes) {
-		iplStaticMeshRelease(&mesh);
+		SteamAudioServer::get_singleton()->release_static_mesh(mesh);
 	}
 	meshes.clear();
 }

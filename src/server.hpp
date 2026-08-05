@@ -65,6 +65,7 @@ public:
 	void remove_local_state(LocalSteamAudioState *ls);
 	void add_static_mesh(IPLStaticMesh mesh);
 	void remove_static_mesh(IPLStaticMesh mesh);
+	void release_static_mesh(IPLStaticMesh &mesh);
 	void add_dynamic_mesh(IPLInstancedMesh mesh);
 	void remove_dynamic_mesh(IPLInstancedMesh mesh);
 	void add_source(IPLSource src);
