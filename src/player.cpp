@@ -160,6 +160,11 @@ LocalSteamAudioState *SteamAudioPlayer::get_local_state() {
 	if (!is_local_state_init.load()) {
 		init_local_state();
 	}
+	if (!is_local_state_init.load()) {
+		// init_local_state() bailed out on an IPL creation failure (see there) - report not
+		// ready rather than handing back a half-constructed state callers would then use.
+		return nullptr;
+	}
 	return &local_state;
 }
 
@@ -170,7 +175,15 @@ void SteamAudioPlayer::init_local_state() {
 
 	IPLSourceSettings src_cfg{};
 	src_cfg.flags = static_cast<IPLSimulationFlags>(IPL_SIMULATIONFLAGS_DIRECT | IPL_SIMULATIONFLAGS_REFLECTIONS);
-	handleErr(iplSourceCreate(gs->sim, &src_cfg, &local_state.src.src));
+	if (!handleErr(iplSourceCreate(gs->sim, &src_cfg, &local_state.src.src))) {
+		// Seen under rapid respawn load: iplSourceCreate can transiently fail (SDK under
+		// pressure from a scene/context that's still being torn down elsewhere). Bail out
+		// instead of registering/using a source handle IPL never actually created -
+		// is_local_state_init stays false, so get_local_state() reports not-ready and a later
+		// call retries this from scratch rather than crashing on the invalid handle.
+		SteamAudio::log(SteamAudio::log_error, "Failed to create IPL source, local state init aborted");
+		return;
+	}
 	SteamAudioServer::get_singleton()->add_source(local_state.src.src);
 
 	// TODO: check if we can't create effects globally and use their Reset functions.

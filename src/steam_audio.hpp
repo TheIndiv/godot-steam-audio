@@ -132,20 +132,25 @@ inline IPLBakedDataIdentifier reverb_baked_data_identifier() {
 	return id;
 }
 
-inline void handleErr(IPLerror err) {
+// Returns true on success. Most call sites still ignore the return value (matches this
+// extension's existing style of logging and pressing on for non-critical setup calls), but
+// per-source creation in SteamAudioPlayer::init_local_state() checks it and bails out instead
+// of registering/using a handle IPL never actually created - see that call site for why.
+inline bool handleErr(IPLerror err) {
 	switch (err) {
 		case IPL_STATUS_SUCCESS:
-			return;
+			return true;
 		case IPL_STATUS_FAILURE:
 			SteamAudio::log(SteamAudio::log_error, "Unspecified error in init");
-			return;
+			return false;
 		case IPL_STATUS_OUTOFMEMORY:
 			SteamAudio::log(SteamAudio::log_error, "Out of memory in init");
-			return;
+			return false;
 		case IPL_STATUS_INITIALIZATION:
 			SteamAudio::log(SteamAudio::log_error, "Failed to handle external dependency in init");
-			return;
+			return false;
 	}
+	return false;
 }
 
 inline void log_callback(IPLLogLevel level, const char *message) {
