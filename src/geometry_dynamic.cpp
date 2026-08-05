@@ -70,11 +70,14 @@ void SteamAudioDynamicGeometry::process_internal(double delta) {
 	auto up = get_global_transform().get_basis().get_column(1);
 	auto fwd = -get_global_transform().get_basis().get_column(2);
 
+	// IPLMatrix4x4 is row-major, applied as result = M * (x, y, z, 1) - each row must hold one
+	// output axis's contribution from all three local axes, not one whole local axis per row
+	// (see the identical fix/explanation in probe_volume.cpp).
 	IPLMatrix4x4 new_trf{
 		{
-				{ right.x, right.y, right.z, orig.x },
-				{ up.x, up.y, up.z, orig.y },
-				{ fwd.x, fwd.y, fwd.z, orig.z },
+				{ right.x, up.x, fwd.x, orig.x },
+				{ right.y, up.y, fwd.y, orig.y },
+				{ right.z, up.z, fwd.z, orig.z },
 				{ 0., 0., 0., 1. },
 		}
 	};
